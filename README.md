@@ -1,62 +1,83 @@
-# Coordinated UAV Fleet Route Planning
+# Decentralised Task Planning for Unmanned Aerial Vehicle Swarm
 
-## Background
+## Abstract
 
 In many situations, a system is composed of many homogeneous or heterogeneous
 subsystems. These subsystems need to be coordinated so as to complete certain tasks,
-e.g., starlink constellation, power distribution stations in a grid, etc.
-
+e.g., power distribution stations in a grid, starlink constellation, etc.
 Currently, such systems are usually manually coordiated, commonly by a centralised controller.
-It is extremely difficult to decentralise and fully automate the coordination.
+It is extremely difficult to fully automate and decentralise the coordination.
 
-For my project, I hope to focus on unmanned aerial vehicle (UAV, or drone) fleet,
-and to develop an algorithm for autonomously coordinated route planning.
-UAVs are usually controlled by a ground station, or they fly by pre-programmed paths.
-UAV fleet will be more flexible and versatile
-if UAVs can work out their routes dynamically on their own in a coordinated way.
-Such fleet will be useful in many situations. For example:
+One particular type of such systems is unmanned aerial vehicle (UAV) swarms.
+Traditionally, UAV swarms are controlled manually by ground control stations (GCSs),
+or they just fly by pre-programmed paths.
+Some papers have proposed algorithms to automate and decentralise swarm control
+[1] [2] [3] [4]. And this remains a frontier of research.
+Autonomous UAV swarms will be more flexible and versatile.
+Such swarms will be useful in many situations. For example:
 
 - Aerial forest fire fighting;
 - Post-disaster search and rescue;
 - Aerial combat of UAV swarm;
 - Drone shows.
 
-I think this is still quite a difficult topic.
-Especially if general-case task planning is considered, a lot of theories may be involved.
-With certian presumptions, things can be easier.
+In this project, I will develop an algorithm for autonomous decentralised swarm task planning,
+in particular, path planning.
+For now, I have not formulated a concrete idea about how the algorithm should work,
+but only vague concepts.
+I take the drone show as the specific situation to be considered.
+A group of drones are instructed to form a particular geometric shape in a particular position.
+The algorithm will then have to solve the following two problems
 
-## Basic presumptions
+- let the drones devide tasks among themselves,
+i.e., which drone should be allocated to which position;
+- let each drone find a viable flying path to its allocated position,
+without colliding with other drones.
 
-- The task is for the UAVs to form a given geometric shape;
-- UAVs shall work out their final positions and flight paths;
+## (Fuzzy) Problem Statement
+
+A group of hovering UAVs at their initial positions.
+UAVs can control their speed (, or, to make it a bit harder, their acceleration).
+A mathematical function describing a geometric shape.
+Within finite time, all the UAVs should be positioned on that shape,
+and should be distributed as evenly as possible.
+
+Some presumptions may be
+
 - UAVs are homogeneous, that is, they know each other well and behave the same;
-- Good communications are established, so no need to deal with latency, etc;
-- No obstacles, except that UAVs shall not collide with each other;
-- There may be limitations on usable airspace;
-- UAV can get its location through GPS.
-
-The focus is path planning algorithm, vehicle dynamics won't be considered.
-The algorithm can be tested by simulation.
+- good communications are established, so no need to deal with latency, etc;
+- no obstacles, except that UAVs shall not collide with each other;
+- there may be limitations on usable airspace;
+- UAV can get its real-time locations precisely.
 
 ## Tech stack
 
 I'd like to develop under Linux enviroment.
-Rust is prefered programming language. However, currently I'm not familiar with Rust.
+Rust is prefered programming language.
+However, currently I'm not familiar with Rust.
 If things get tough or if necessary libraries are missing,
-I might turn to C++ instead, which I'm relatively good at.
+I might turn to C++/Python instead, which I'm relatively good at.
 
 ## Expected output
 
-I hope at least to develop a software with well-defined interfaces, possibly used by DIY drones.
-Beyond that, if feasible, I wish to do some research on coordinated task planning and task division,
-and maybe to publish a paper if possible.
+I hope at least to develop a software implementing the algorithm with well-defined interfaces.
 
-## Open to Other Ideas
+Beyond that, if time permits, I wish to do some research on decentralised task planning,
+and maybe to publish a paper if I've gotten some novel idea.
 
-I'm also open to other project ideas. For example:
+## Test and Evaluation
 
-- Large scale simulation;
-- Computer architectures;
-- Operating systems;
-- Game engines;
-- Other high-performance systems.
+The algorithm can be tested by numerical simulation,
+which is the general evalution method I've seen in previous papers of this kind.
+
+As the evalution is not expected to involve any other individuals or animals,
+**ethics** review is therefore not needed.
+
+## Time Plan
+
+This project should be finished within 3 months.
+Below are my estimated time plan
+
+1. Research and idea formation: 0.5 - 1 month.
+2. Algorithm development: 1 - 1.5 month.
+3. Evalution: 0.5 - 1 month.
