@@ -1,9 +1,11 @@
 ## Tasks
 
-- [] abstract with keywords
-- [] background writing
+- [] split background into different parts and set up writing plan
 - [] problem definition
 - [] previous example PGT thesis
+
+- []
+- [] abstract with keywords
 
 ## Further Readings
 
@@ -13,6 +15,7 @@
 ## Further Readings
 
 - A star
+- D star
 - Rapidly-Exploring Random Tree
 
 ## Website References
