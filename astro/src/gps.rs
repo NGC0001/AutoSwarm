@@ -27,12 +27,8 @@ impl Gps {
     }
 
     pub fn update(&mut self) {
-        for msg in (*self.tc).borrow_mut().retrieve(CHANNEL) {
-            if let Some(p) = msg.downcast_ref::<Position>() {
-                self.p = *p;
-            } else {
-                panic!("Any not a Position");
-            }
+        for p in (*self.tc).borrow_mut().retrieve::<Position>(CHANNEL) {
+            self.p = p;
         }
     }
 }
