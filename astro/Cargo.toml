@@ -8,3 +8,5 @@ description = "Autonomous Swarm Tasking Routing and Organisation"
 
 [dependencies]
 clap = { version = "4.5.8", features = ["derive"] }
+serde = { version = "1.0.204", features = ["derive"] }
+zvariant = "4.1.2"

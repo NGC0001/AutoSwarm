@@ -3,10 +3,11 @@ use super::transceiver::Transceiver;
 
 const CHANNEL: &str = "GPS";
 
+#[derive(Copy, Clone)]
 pub struct Position {
-    x: i32,
-    y: i32,
-    z: i32,
+    x: f64,
+    y: f64,
+    z: f64,
 }
 
 pub struct Gps {
@@ -20,12 +21,18 @@ impl Gps {
     }
 
     pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Gps {
-        let gps = Gps {p: Position{x: 0, y: 0, z: 0}, tc: tc.clone()};
+        let mut gps = Gps {p: Position{x: 0.0, y: 0.0, z: 0.0}, tc: tc.clone()};
         gps.update();
         gps
     }
 
-    pub fn update(&self) {
-        for msg in (*self.tc).borrow_mut().retrieve(CHANNEL) {}
+    pub fn update(&mut self) {
+        for msg in (*self.tc).borrow_mut().retrieve(CHANNEL) {
+            if let Some(p) = msg.downcast_ref::<Position>() {
+                self.p = *p;
+            } else {
+                panic!("Any not a Position");
+            }
+        }
     }
 }
