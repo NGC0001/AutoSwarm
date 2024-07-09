@@ -1,5 +1,7 @@
 ## Tasks
 
+- [] [socket example](https://github.com/mattlennon3/unix-socket-example/blob/trunk/src/main.rs)
+
 - [] split background into different parts and set up writing plan
 - [] problem definition
 - [] previous example PGT thesis

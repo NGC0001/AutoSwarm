@@ -1,4 +1,9 @@
 use clap::Parser;
+use std::{cell::RefCell, rc::Rc};
+
+mod control;
+mod gps;
+mod transceiver;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
