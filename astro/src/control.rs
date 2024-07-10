@@ -1,11 +1,21 @@
 use std::{cell::RefCell, rc::Rc};
+
+use serde::{Deserialize, Serialize};
+
 use super::transceiver::Transceiver;
 
-#[derive(Copy, Clone)]
+const CHANNEL: &str = "CTR";
+
+#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {
     vx: f64,
     vy: f64,
     vz: f64,
+}
+
+#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+pub struct ControlMsg {
+    v: Velocity,
 }
 
 pub struct Control {
@@ -14,12 +24,20 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn set_v(&mut self, v: &Velocity) {
-        self.v = *v;
+    pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Control {
+        Control {
+            v: Velocity{vx: 0.0, vy: 0.0, vz: 0.0},
+            tc: tc.clone(),
+        }
     }
 
-    pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Control {
-        let c = Control {v: Velocity{vx: 0.0, vy: 0.0, vz: 0.0}, tc: tc.clone()};
-        c
+    pub fn read_v(&self) -> Velocity {
+        self.v
+    }
+
+    pub fn set_v(&mut self, v: &Velocity) {
+        self.v = *v;
+        let msg = ControlMsg {v: self.v};
+        (*self.tc).borrow_mut().send(CHANNEL, &msg);
     }
 }
