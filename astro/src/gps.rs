@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::transceiver::Transceiver;
 
-const CHANNEL: &str = "GPS";
+const CHANNEL: &str = "GPS_";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Position {

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::transceiver::Transceiver;
 
-const CHANNEL: &str = "CTR";
+const CHANNEL: &str = "CTRL";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {
