@@ -91,8 +91,8 @@ impl Transceiver {
     pub fn send<T>(&mut self, channel: &str, v: &T)
     where T: Serialize {
         let data = serde_json::to_string(v).unwrap();
-        let len_bytes: [u8; 4] = (data.len() as u32).to_le_bytes();
         dbg!(&data);
+        let len_bytes: [u8; 4] = (data.len() as u32).to_le_bytes();
         self.writer.write_all(channel.as_bytes()).unwrap();
         self.writer.write_all(&len_bytes).unwrap();
         self.writer.write_all(data.as_bytes()).unwrap();
@@ -114,6 +114,7 @@ impl Transceiver {
             }
             let channel: &str = std::str::from_utf8(&self.readbuf[..4]).unwrap();
             let data: &str = std::str::from_utf8(&self.readbuf[8..][..len]).unwrap();
+            dbg!(&data);
             self.msg_map.entry(String::from(channel)).or_insert(vec![]).push(String::from(data));
             self.readbuf.drain(..(len + 8));
         }

@@ -8,9 +8,9 @@ const CHANNEL: &str = "CTRL";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {
-    vx: f64,
-    vy: f64,
-    vz: f64,
+    pub vx: f64,
+    pub vy: f64,
+    pub vz: f64,
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
