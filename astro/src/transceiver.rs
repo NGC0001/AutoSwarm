@@ -92,6 +92,7 @@ impl Transceiver {
         res
     }
 
+    // TODO: does this function block?
     pub fn send_raw(&mut self, channel: &str, data: &String) {
         let len_bytes: [u8; 4] = (data.len() as u32).to_le_bytes();
         self.writer.write_all(channel.as_bytes()).unwrap();
@@ -107,6 +108,7 @@ impl Transceiver {
         self.send_raw(channel, &data);
     }
 
+    // TODO: does this function block?
     fn do_receive(&mut self) {
         let mut buf: Vec<u8> = vec![];
         self.reader.read(&mut buf).unwrap();

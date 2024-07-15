@@ -1,6 +1,7 @@
 use std::os::unix::net::UnixStream;
 use std::cell::RefCell;
 use std::time::{Duration, Instant};
+use std::rc::Rc;
 
 use astro::comm;
 use astro::control::{self, ControlMsg, Velocity};
@@ -14,12 +15,17 @@ pub struct MsgPack {
     data_vec: Vec<String>,
 }
 
-const MSG_OUT_DISTANCE: f64 = 1000.0;
+pub const DEFAULT_MSG_OUT_DISTANCE: f64 = 1000.0;
+
+pub struct UavConf {
+    pub id: u32,
+    pub msg_out_distance: f64,  // how far away this UAV can transmit its messages
+    pub init_p: Position,
+}
 
 // provides simulation support for a running UAV.
 pub struct UavSim {
-    id: u32,
-    msg_out_distance: f64,  // how far away this UAV can transmit its messages
+    conf: Rc<UavConf>,
     p: Position,
     p_calc_t: Instant,
     p_send_t: Instant,
@@ -28,12 +34,11 @@ pub struct UavSim {
 }
 
 impl UavSim {
-    pub fn new(id: u32, p: Position, stream: UnixStream) -> UavSim {
+    pub fn new(conf: &Rc<UavConf>, stream: UnixStream) -> UavSim {
         let now = Instant::now();
         UavSim {
-            id,
-            msg_out_distance: MSG_OUT_DISTANCE,
-            p,
+            conf: conf.clone(),
+            p: conf.init_p,
             p_calc_t: now,
             p_send_t: now - Duration::from_secs(3600 * 24 * 365 * 10),
             v: Velocity {vx: 0.0, vy: 0.0, vz: 0.0},
@@ -67,9 +72,9 @@ impl UavSim {
 
     pub fn collect_comm_msgs(&self) -> MsgPack {  // collect messages from this UAV
         MsgPack {
-            id: self.id,
+            id: self.conf.id,
             p: self.p,
-            msg_out_distance: self.msg_out_distance,
+            msg_out_distance: self.conf.msg_out_distance,
             data_vec: self.tc.borrow_mut().retrieve_raw(comm::CHANNEL),
         }
     }
@@ -77,7 +82,7 @@ impl UavSim {
     // receive messages from other UAVs, filtering by distance
     pub fn dispose_comm_msgs(&self, msg_packs: &Vec<MsgPack>) {
         for pack in msg_packs {
-            if pack.id == self.id {
+            if pack.id == self.conf.id {
                 continue;  // filtering out messages sent by itself
             }
             if pack.msg_out_distance < Self::calc_distance(&pack.p, &self.p) {

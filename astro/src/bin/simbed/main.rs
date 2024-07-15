@@ -1,12 +1,15 @@
 use clap::Parser;
 
-mod uavsim;
 mod uav;
+mod uavsim;
+mod simbed;
+
+use simbed::SimBed;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(long)]
+    #[arg(long, default_value_t = String::from("target/debug/astro"))]
     astro_bin: String,
     #[arg(long, default_value_t = 1)]
     num_uav: u32,
@@ -14,8 +17,5 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let mut uavs: Vec<uav::Uav> = vec![];
-    for id in 0..args.num_uav {
-        uavs.push(uav::Uav::new(id));
-    }
+    let simbed = SimBed::new(args.num_uav, &args.astro_bin);
 }
