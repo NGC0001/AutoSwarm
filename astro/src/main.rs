@@ -4,7 +4,7 @@ use std::{thread, time};
 
 use clap::Parser;
 
-use astro::{control, gps, transceiver::Transceiver, util};
+use astro::{comm, control, gps, transceiver::Transceiver, util};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -15,12 +15,19 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let socket_file: String = util::get_socket_name(&args.id);
+    let socket_file: String = util::get_socket_name(args.id);
     dbg!(&args, &socket_file);
     let stream = UnixStream::connect(socket_file).unwrap();
     let transceiver = Rc::new(RefCell::new(Transceiver::new(stream)));
     let mut gps = gps::Gps::new(&transceiver);
     let mut control = control::Control::new(&transceiver);
+    let mut comm = comm::Comm::new(&transceiver);
+    loop {
+        if gps.update() {
+            break;
+        }
+        thread::sleep(time::Duration::from_millis(200));
+    }
     for _ in 0..5 {
         gps.update();
         dbg!(gps.read_pos());

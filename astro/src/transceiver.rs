@@ -73,30 +73,38 @@ impl Transceiver {
         }
     }
 
-    pub fn retrieve<T>(&mut self, channel: &str) -> Vec<T>
-    where T: DeserializeOwned,
-    {
+    pub fn retrieve_raw(&mut self, channel: &str) -> Vec<String> {
         self.do_receive();
         let mut msg_vec: Vec<String> = vec![];
         if let Some(old_msg_vec) = self.msg_map.get_mut(channel) {
             std::mem::swap(old_msg_vec, &mut msg_vec);
         }
+        msg_vec
+    }
+
+    pub fn retrieve<T>(&mut self, channel: &str) -> Vec<T>
+    where T: DeserializeOwned,
+    {
         let mut res: Vec<T> = vec![];
-        for msg in msg_vec {
+        for msg in self.retrieve_raw(channel) {
             res.push(serde_json::from_str(&msg).unwrap());
         }
         res
+    }
+
+    pub fn send_raw(&mut self, channel: &str, data: &String) {
+        let len_bytes: [u8; 4] = (data.len() as u32).to_le_bytes();
+        self.writer.write_all(channel.as_bytes()).unwrap();
+        self.writer.write_all(&len_bytes).unwrap();
+        self.writer.write_all(data.as_bytes()).unwrap();
+        self.writer.flush().unwrap();
     }
 
     pub fn send<T>(&mut self, channel: &str, v: &T)
     where T: Serialize {
         let data = serde_json::to_string(v).unwrap();
         dbg!(&data);
-        let len_bytes: [u8; 4] = (data.len() as u32).to_le_bytes();
-        self.writer.write_all(channel.as_bytes()).unwrap();
-        self.writer.write_all(&len_bytes).unwrap();
-        self.writer.write_all(data.as_bytes()).unwrap();
-        self.writer.flush().unwrap();
+        self.send_raw(channel, &data);
     }
 
     fn do_receive(&mut self) {

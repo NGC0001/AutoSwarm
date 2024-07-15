@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::transceiver::Transceiver;
 
-const CHANNEL: &str = "CTRL";
+pub const CHANNEL: &str = "CTRL";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {
@@ -15,7 +15,7 @@ pub struct Velocity {
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct ControlMsg {
-    v: Velocity,
+    pub v: Velocity,
 }
 
 pub struct Control {
@@ -37,6 +37,10 @@ impl Control {
 
     pub fn set_v(&mut self, v: &Velocity) {
         self.v = *v;
+        self.send_ctrl_msg();
+    }
+
+    pub fn send_ctrl_msg(&self) {
         let msg = ControlMsg {v: self.v};
         (*self.tc).borrow_mut().send(CHANNEL, &msg);
     }

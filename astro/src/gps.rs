@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::transceiver::Transceiver;
 
-const CHANNEL: &str = "GPS_";
+pub const CHANNEL: &str = "GPS_";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Position {
@@ -15,7 +15,7 @@ pub struct Position {
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct GpsMsg {
-    p: Position,
+    pub p: Position,
 }
 
 pub struct Gps {
@@ -35,9 +35,12 @@ impl Gps {
         self.p
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
+        let mut updated: bool = false;
         for m in (*self.tc).borrow_mut().retrieve::<GpsMsg>(CHANNEL) {
             self.p = m.p;
+            updated = true;
         }
+        updated
     }
 }

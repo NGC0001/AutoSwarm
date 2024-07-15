@@ -1,6 +1,7 @@
 use clap::Parser;
 
 mod uavsim;
+mod uav;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -12,5 +13,9 @@ struct Args {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let args = Args::parse();
+    let mut uavs: Vec<uav::Uav> = vec![];
+    for id in 0..args.num_uav {
+        uavs.push(uav::Uav::new(id));
+    }
 }
