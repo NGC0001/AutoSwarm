@@ -7,6 +7,8 @@ use super::uavsim::UavSim;
 
 pub struct Uav {
     id: u32,
+    // https://doc.rust-lang.org/std/os/unix/net/struct.Incoming.html
+    // for stream in listener.incoming()
     listener: UnixListener,
     sim: Option<UavSim>,
 }
