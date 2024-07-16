@@ -1,7 +1,13 @@
+use std::thread;
+use std::time::{Duration, Instant};
+
 use astro::gps::Position;
 
 use super::uavsim::{self, UavConf, UavSim, MsgPack};
 use super::uav::Uav;
+
+pub const LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
+pub const LOOP_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct SimBed {
     uavs: Vec<Uav>,
@@ -31,7 +37,13 @@ impl SimBed {
 
     pub fn run_sim_loop(&mut self) {
         loop {
+            let start = Instant::now();
             self.sim_step();
+            let end = Instant::now();
+            if end - start < LOOP_INTERVAL_MIN {
+                let sleep_duration = LOOP_INTERVAL - (end - start);
+                thread::sleep(sleep_duration);
+            }
         }
     }
 

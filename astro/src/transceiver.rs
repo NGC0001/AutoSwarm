@@ -35,17 +35,22 @@ where for<'a> &'a T: Write,
 }
 
 use std::collections::HashMap;
-use std::io::{BufReader, BufWriter};
+use std::io::{self, BufReader, BufWriter};
 use std::io::prelude::*;
 use std::net::Shutdown;
 use std::ops::Drop;
 use std::os::unix::net::UnixStream;
 use std::rc::Rc;
+use std::result::Result;
+use std::thread;
+use std::time::Duration;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use io_rc::IoRc;
+
+pub const SEND_RETRY_INTERVAL: Duration = Duration::from_millis(20);
 
 pub struct Transceiver {
     stream: Rc<UnixStream>,
@@ -63,6 +68,7 @@ impl Drop for Transceiver {
 
 impl Transceiver {
     pub fn new(stream: UnixStream) -> Transceiver {
+        stream.set_nonblocking(true).unwrap();
         let s = Rc::new(stream);
         Transceiver {
             stream: s.clone(),
@@ -92,41 +98,66 @@ impl Transceiver {
         res
     }
 
-    // TODO: does this function block?
+    // this function may block
     pub fn send_raw(&mut self, channel: &str, data: &String) {
         let len_bytes: [u8; 4] = (data.len() as u32).to_le_bytes();
         self.writer.write_all(channel.as_bytes()).unwrap();
         self.writer.write_all(&len_bytes).unwrap();
         self.writer.write_all(data.as_bytes()).unwrap();
-        self.writer.flush().unwrap();
+        self.writer.write_all(b"\n").unwrap();
+        while match self.writer.flush() {
+            Ok(..) => Ok(false),  // successfully flushed, no more loops
+            Err(e) => match e.kind() {
+                io::ErrorKind::WouldBlock => Ok(true),  // busy resource, try again, may block
+                _ => Err(e),  // true error
+            }
+        }.unwrap() {
+            thread::sleep(SEND_RETRY_INTERVAL);
+        }
     }
 
     pub fn send<T>(&mut self, channel: &str, v: &T)
     where T: Serialize {
         let data = serde_json::to_string(v).unwrap();
-        dbg!(&data);
         self.send_raw(channel, &data);
     }
 
-    // TODO: does this function block?
     fn do_receive(&mut self) {
-        let mut buf: Vec<u8> = vec![];
-        self.reader.read(&mut buf).unwrap();
+        let mut buf = self.do_read().unwrap();
+        if buf.len() <= 0 {
+            return;
+        }
         self.readbuf.append(&mut buf);
+        self.pick_data_from_readbuf();
+    }
+
+    // this function should not block (consider nonblocking io)
+    fn do_read(&mut self) -> Result<Vec<u8>, io::Error> {
+        let mut buf: Vec<u8> = vec![];
+        // note, `read` reads until EOF, so use `read_util` with a delimiter
+        match self.reader.read_until(b'\n', &mut buf) {
+            Ok(_) => Ok(buf),
+            Err(e) => match e.kind() {
+                io::ErrorKind::WouldBlock => Ok(buf),
+                _ => Err(e),
+            },
+        }
+    }
+
+    fn pick_data_from_readbuf(&mut self) {
         loop {
             if self.readbuf.len() < 8 {
                 break;
             }
             let len_bytes: [u8; 4] = <[u8; 4]>::try_from(&self.readbuf[4..8]).unwrap();
             let len: usize = u32::from_le_bytes(len_bytes) as usize;
-            if self.readbuf.len() - 8 < len {
+            if self.readbuf.len() - 8 < len + 1 {
                 break;
             }
             let channel: &str = std::str::from_utf8(&self.readbuf[..4]).unwrap();
             let data: &str = std::str::from_utf8(&self.readbuf[8..][..len]).unwrap();
-            dbg!(&data);
             self.msg_map.entry(String::from(channel)).or_insert(vec![]).push(String::from(data));
-            self.readbuf.drain(..(len + 8));
+            self.readbuf.drain(..(8 + len + 1));
         }
     }
 }

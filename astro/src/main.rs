@@ -29,7 +29,7 @@ fn main() {
         if gps.update() {
             break;
         }
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(50));
     }
     loop {
         gps.update();
@@ -40,7 +40,7 @@ fn main() {
         };
         comm.send_msg(&msg);
         let msgs = comm.receive_msgs();
-        dbg!(args.id, gps.read_pos(), control.read_v(), &msgs);
+        if args.id == 1 { dbg!(args.id, gps.read_pos(), control.read_v(), &msgs); }
         thread::sleep(time::Duration::from_millis(100));
     }
 }
