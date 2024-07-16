@@ -47,6 +47,7 @@ impl SimBed {
         }
     }
 
+    // TODO: ready for multi-threading acceleration
     pub fn sim_step(&mut self) {
         let mut uav_sims: Vec<&mut UavSim> = vec![];
         for uav in &mut self.uavs {
