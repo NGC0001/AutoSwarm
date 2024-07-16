@@ -16,11 +16,13 @@ pub struct MsgPack {
 }
 
 pub const DEFAULT_MSG_OUT_DISTANCE: f64 = 1000.0;
+pub const DEFAULT_POSITION_SEND_INTERVAL: Duration = Duration::from_millis(100);
 
 pub struct UavConf {
     pub id: u32,
     pub msg_out_distance: f64,  // how far away this UAV can transmit its messages
     pub init_p: Position,
+    pub p_send_intrvl: Duration,
 }
 
 // provides simulation support for a running UAV.
@@ -40,7 +42,7 @@ impl UavSim {
             conf: conf.clone(),
             p: conf.init_p,
             p_calc_t: now,
-            p_send_t: now - Duration::from_secs(3600 * 24 * 365 * 10),
+            p_send_t: now - conf.p_send_intrvl,
             v: Velocity {vx: 0.0, vy: 0.0, vz: 0.0},
             tc: RefCell::new(Transceiver::new(stream)),
         }
@@ -55,7 +57,7 @@ impl UavSim {
         updated
     }
 
-    pub fn calc_p(&mut self) {  // integration of v into p
+    pub fn update_p(&mut self) {  // integration of v into p
         let now = Instant::now();
         let dt = now - self.p_calc_t;
         let dt_s: f64 = dt.as_secs_f64();
@@ -63,6 +65,10 @@ impl UavSim {
         self.p.y += self.v.vy * dt_s;
         self.p.z += self.v.vz * dt_s;
         self.p_calc_t = now;
+        if now - self.p_send_t > self.conf.p_send_intrvl {
+            self.send_gps_msg();
+            self.p_send_t = now;
+        }
     }
 
     pub fn send_gps_msg(&self) {  // send position to UAV

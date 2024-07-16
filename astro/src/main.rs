@@ -4,7 +4,11 @@ use std::{thread, time};
 
 use clap::Parser;
 
-use astro::{comm, control, gps, transceiver::Transceiver, util};
+use astro::{comm::Comm, comm::CommMsg};
+use astro::{control::Control, control::Velocity};
+use astro::gps::Gps;
+use astro::transceiver::Transceiver;
+use astro::util;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -16,23 +20,27 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let socket_file: String = util::get_socket_name(args.id);
-    dbg!(&args, &socket_file);
     let stream = UnixStream::connect(socket_file).unwrap();
     let transceiver = Rc::new(RefCell::new(Transceiver::new(stream)));
-    let mut gps = gps::Gps::new(&transceiver);
-    let mut control = control::Control::new(&transceiver);
-    let mut comm = comm::Comm::new(&transceiver);
+    let mut gps = Gps::new(&transceiver);
+    let mut control = Control::new(&transceiver);
+    let comm = Comm::new(&transceiver);
     loop {
         if gps.update() {
             break;
         }
-        thread::sleep(time::Duration::from_millis(200));
+        thread::sleep(time::Duration::from_millis(100));
     }
-    for _ in 0..5 {
+    loop {
         gps.update();
-        dbg!(gps.read_pos());
-        control.set_v(&control::Velocity {vx: 0.0, vy: 0.0, vz: 0.0});
-        dbg!(control.read_v());
-        thread::sleep(time::Duration::from_millis(1000));
+        control.set_v(&Velocity {vx: 0.0, vy: 0.0, vz: 0.0});
+        let msg = CommMsg {
+            from_id: args.id,
+            to_id: -1,
+        };
+        comm.send_msg(&msg);
+        let msgs = comm.receive_msgs();
+        dbg!(args.id, gps.read_pos(), control.read_v(), &msgs);
+        thread::sleep(time::Duration::from_millis(100));
     }
 }
