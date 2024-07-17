@@ -8,8 +8,8 @@ pub const CHANNEL: &str = "COMM";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct CommMsg {
-    pub from_id: u32,
-    pub to_id: i32,
+    pub from_id: u32,  // message sender
+    pub to_id: u32,  // target message receiver, 0 means broadcasting
 }
 
 pub struct Comm {

@@ -8,9 +8,9 @@ pub const CHANNEL: &str = "GPS_";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Position {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]

@@ -1,7 +1,8 @@
 use clap::Parser;
 
-mod uav;
+mod uavconf;
 mod uavsim;
+mod uav;
 mod simbed;
 
 use simbed::SimBed;

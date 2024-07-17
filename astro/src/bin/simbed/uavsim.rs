@@ -1,6 +1,6 @@
 use std::os::unix::net::UnixStream;
 use std::cell::RefCell;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::rc::Rc;
 
 use astro::comm;
@@ -8,21 +8,23 @@ use astro::control::{self, ControlMsg, Velocity};
 use astro::gps::{self, GpsMsg, Position};
 use astro::transceiver::Transceiver;
 
+use super::uavconf::UavConf;
+
 pub struct MsgPack {
     id: u32,
     p: Position,
-    msg_out_distance: f64,
+    msg_out_distance: f32,
     data_vec: Vec<String>,
 }
 
-pub const DEFAULT_MSG_OUT_DISTANCE: f64 = 1000.0;
-pub const DEFAULT_POSITION_SEND_INTERVAL: Duration = Duration::from_millis(100);
+impl MsgPack {
+    pub fn get_source_id(&self) -> u32 {
+        self.id
+    }
 
-pub struct UavConf {
-    pub id: u32,
-    pub msg_out_distance: f64,  // how far away this UAV can transmit its messages
-    pub init_p: Position,
-    pub p_send_intrvl: Duration,
+    pub fn get_source_p(&self) -> &Position {
+        &self.p
+    }
 }
 
 // provides simulation support for a running UAV.
@@ -48,6 +50,10 @@ impl UavSim {
         }
     }
 
+    pub fn get_id(&self) -> u32 {
+        self.conf.id
+    }
+
     pub fn update_v(&mut self) -> bool {
         let mut updated: bool = false;
         for m in self.tc.borrow_mut().retrieve::<ControlMsg>(control::CHANNEL) {
@@ -60,7 +66,7 @@ impl UavSim {
     pub fn update_p(&mut self) {  // integration of v into p
         let now = Instant::now();
         let dt = now - self.p_calc_t;
-        let dt_s: f64 = dt.as_secs_f64();
+        let dt_s: f32 = dt.as_secs_f32();
         self.p.x += self.v.vx * dt_s;
         self.p.y += self.v.vy * dt_s;
         self.p.z += self.v.vz * dt_s;
@@ -100,11 +106,15 @@ impl UavSim {
         }
     }
 
-    fn calc_distance(p1: &Position, p2: &Position) -> f64 {
+    pub fn overlap_with_uav_at(&self, other_p: &Position) -> bool {  // assuming same radius
+        Self::calc_distance(&self.p, other_p) <= 2.0 * self.conf.radius
+    }
+
+    fn calc_distance(p1: &Position, p2: &Position) -> f32 {
         (
-            f64::powi(p1.x - p2.x, 2) + 
-            f64::powi(p1.y - p2.y, 2) + 
-            f64::powi(p1.z - p2.z, 2)
+            f32::powi(p1.x - p2.x, 2) + 
+            f32::powi(p1.y - p2.y, 2) + 
+            f32::powi(p1.z - p2.z, 2)
         ).sqrt()
     }
 }

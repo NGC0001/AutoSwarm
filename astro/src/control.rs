@@ -8,9 +8,9 @@ pub const CHANNEL: &str = "CTRL";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {
-    pub vx: f64,
-    pub vy: f64,
-    pub vz: f64,
+    pub vx: f32,
+    pub vy: f32,
+    pub vz: f32,
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
@@ -26,7 +26,7 @@ pub struct Control {
 impl Control {
     pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Control {
         Control {
-            v: Velocity{vx: 0.0, vy: 0.0, vz: 0.0},
+            v: Velocity {vx: 0.0, vy: 0.0, vz: 0.0},
             tc: tc.clone(),
         }
     }

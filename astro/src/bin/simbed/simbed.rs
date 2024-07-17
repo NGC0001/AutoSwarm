@@ -3,31 +3,31 @@ use std::time::{Duration, Instant};
 
 use astro::gps::Position;
 
-use super::uavsim::{self, UavConf, UavSim, MsgPack};
+use super::uavconf::{self, UavConf};
+use super::uavsim::{UavSim, MsgPack};
 use super::uav::Uav;
 
-pub const LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
-pub const LOOP_INTERVAL: Duration = Duration::from_millis(50);
+pub const SIM_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
+pub const SIM_LOOP_INTERVAL: Duration = Duration::from_millis(50);
 
+// provide simulation support for a UAV swarm including:
+// a) kinetic integration for each UAV
+// b) message distribution among the swarm
+// c) collision check
 pub struct SimBed {
-    uavs: Vec<Uav>,
+    uavs: Vec<Uav>,  // UAV with `id` should be placed at index `id - 1`
 }
 
 impl SimBed {
     pub fn new(num_uav: u32, astro_bin: &String) -> SimBed {
         let mut uavs: Vec<Uav> = vec![];
-        for id in 0..num_uav {
+        for id in 1..=num_uav {
             let init_p = Position {
-                x: 0.0 + (id as f64) * uavsim::DEFAULT_MSG_OUT_DISTANCE / 2.0,
+                x: 0.0 + (id as f32) * uavconf::DEFAULT_MSG_OUT_DISTANCE / 1.8,
                 y: 0.0,
                 z: 0.0,
             };
-            let conf = UavConf {
-                id,
-                msg_out_distance: uavsim::DEFAULT_MSG_OUT_DISTANCE,
-                init_p,
-                p_send_intrvl: uavsim::DEFAULT_POSITION_SEND_INTERVAL,
-            };
+            let conf = UavConf::new(id, init_p);
             uavs.push(Uav::new(conf, astro_bin));
         }
         SimBed {
@@ -40,8 +40,8 @@ impl SimBed {
             let start = Instant::now();
             self.sim_step();
             let end = Instant::now();
-            if end - start < LOOP_INTERVAL_MIN {
-                let sleep_duration = LOOP_INTERVAL - (end - start);
+            if end - start < SIM_LOOP_INTERVAL_MIN {
+                let sleep_duration = SIM_LOOP_INTERVAL - (end - start);
                 thread::sleep(sleep_duration);
             }
         }
@@ -58,6 +58,8 @@ impl SimBed {
         Self::update_kinetics(&mut uav_sims);
         let msg_packs = Self::collect_message_packs(&uav_sims);
         Self::dispose_message_packs(&uav_sims, &msg_packs);
+        let collision_ids = Self::check_collisions_by_msg_packs(&uav_sims, &msg_packs);
+        self.shutdown_uavs(collision_ids);
     }
 
     fn update_kinetics(sims: &mut Vec<&mut UavSim>) {
@@ -78,6 +80,28 @@ impl SimBed {
     fn dispose_message_packs(sims: &Vec<&mut UavSim>, msg_packs: &Vec<MsgPack>) {
         for sim in sims {
             sim.dispose_comm_msgs(msg_packs);
+        }
+    }
+
+    fn check_collisions_by_msg_packs(sims: &Vec<&mut UavSim>, msg_packs: &Vec<MsgPack>) -> Vec<u32> {
+        let mut collision_ids: Vec<u32> = vec![];
+        for sim in sims {
+            for pack in msg_packs {
+                if sim.get_id() == pack.get_source_id() {  // no collision check with itself
+                    continue;
+                }
+                if sim.overlap_with_uav_at(pack.get_source_p()) {
+                    collision_ids.push(pack.get_source_id());
+                    collision_ids.push(sim.get_id());
+                }
+            }
+        }
+        collision_ids
+    }
+
+    fn shutdown_uavs(&mut self, ids: Vec<u32>) {
+        for id in ids {
+            self.uavs[(id - 1) as usize].shutdown();
         }
     }
 }

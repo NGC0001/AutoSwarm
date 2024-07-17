@@ -6,10 +6,19 @@ use std::rc::Rc;
 
 use astro::util;
 
-use super::uavsim::{UavConf, UavSim};
+use super::uavconf::UavConf;
+use super::uavsim::UavSim;
+
+#[derive(PartialEq)]
+enum UavStatus {
+    Starting,
+    Running,
+    Shutdown,
+}
 
 pub struct Uav {
     conf: Rc<UavConf>,
+    status: UavStatus,
     socket_file: String,
     listener: UnixListener,
     process: Child,
@@ -25,9 +34,10 @@ impl Uav {
         }
         let listener = UnixListener::bind(socket_file.clone()).unwrap();
         listener.set_nonblocking(true).unwrap();
-        let process = Command::new(bin).arg("--id").arg(conf.id.to_string()).spawn().unwrap();
+        let process = Self::spawn_uav_process(&*conf, bin);
         Uav {
             conf,
+            status: UavStatus::Starting,
             socket_file,
             listener,
             process,
@@ -35,8 +45,21 @@ impl Uav {
         }
     }
 
+    fn spawn_uav_process(conf: &UavConf, bin: &String) -> Child {
+        Command::new(bin)
+            .arg("--id").arg(conf.id.to_string())
+            .arg("--uav-radius").arg(conf.radius.to_string())
+            .spawn().unwrap()
+    }
+
+    pub fn shutdown(&mut self) {
+        self.process.kill().unwrap();
+        self.sim = Option::None;
+        self.status = UavStatus::Shutdown;
+    }
+
     pub fn get_uav_sim(&mut self) -> &mut Option<UavSim> {
-        if self.sim.is_none() {
+        if self.status == UavStatus::Starting {
             self.try_accept();
         }
         &mut self.sim
@@ -45,8 +68,9 @@ impl Uav {
     fn try_accept(&mut self) -> bool {
         match self.listener.accept() {
             Ok((stream, _)) => {
-                self.sim = Option::Some(UavSim::new(&self.conf, stream));
                 std::fs::remove_file(&self.socket_file).unwrap();
+                self.sim = Option::Some(UavSim::new(&self.conf, stream));
+                self.status = UavStatus::Running;
                 true
             },
             Err(_) => false,
