@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use astro::gps::Position;
+use astro::kinetics::Position;
 
 pub const DEFAULT_POSITION_SEND_INTERVAL: Duration = Duration::from_millis(100);
 pub const DEFAULT_MSG_OUT_DISTANCE: f32 = 200.0;  // m

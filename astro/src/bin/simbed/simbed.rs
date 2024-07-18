@@ -1,7 +1,7 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use astro::gps::Position;
+use astro::kinetics::Position;
 
 use super::uavconf::{self, UavConf};
 use super::uavsim::{UavSim, MsgPack};

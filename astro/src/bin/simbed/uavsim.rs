@@ -4,8 +4,8 @@ use std::time::Instant;
 use std::rc::Rc;
 
 use astro::comm;
-use astro::kinetics::{self, KntcMsg, Velocity};
-use astro::gps::{self, GpsMsg, Position};
+use astro::kinetics::{self, Position, Velocity, KntcMsg};
+use astro::gps::{self, GpsMsg};
 use astro::transceiver::Transceiver;
 
 use super::uavconf::UavConf;
@@ -65,11 +65,7 @@ impl UavSim {
 
     pub fn update_p(&mut self) {  // integration of v into p
         let now = Instant::now();
-        let dt = now - self.p_calc_t;
-        let dt_s: f32 = dt.as_secs_f32();
-        self.p.x += self.v.vx * dt_s;
-        self.p.y += self.v.vy * dt_s;
-        self.p.z += self.v.vz * dt_s;
+        self.p += &self.v * (now - self.p_calc_t);
         self.p_calc_t = now;
         if now - self.p_send_t > self.conf.p_send_intrvl {
             self.send_gps_msg();

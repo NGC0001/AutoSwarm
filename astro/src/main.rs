@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use astro::{Astro, AstroConf};
+use astro::{Astro, astroconf::AstroConf};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

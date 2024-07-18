@@ -30,4 +30,11 @@ impl Comm {
     pub fn send_msg(&self, msg: &CommMsg) {
         (*self.tc).borrow_mut().send(CHANNEL, msg);
     }
+
+    pub fn send_msgs(&self, msgs: &Vec<CommMsg>) {
+        let mut sender = (*self.tc).borrow_mut();
+        for msg in msgs {
+            sender.send(CHANNEL, msg);
+        }
+    }
 }
