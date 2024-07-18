@@ -4,7 +4,7 @@ use std::time::Instant;
 use std::rc::Rc;
 
 use astro::comm;
-use astro::control::{self, ControlMsg, Velocity};
+use astro::kinetics::{self, KntcMsg, Velocity};
 use astro::gps::{self, GpsMsg, Position};
 use astro::transceiver::Transceiver;
 
@@ -56,7 +56,7 @@ impl UavSim {
 
     pub fn update_v(&mut self) -> bool {
         let mut updated: bool = false;
-        for m in self.tc.borrow_mut().retrieve::<ControlMsg>(control::CHANNEL) {
+        for m in self.tc.borrow_mut().retrieve::<KntcMsg>(kinetics::CHANNEL) {
             self.v = m.v;
             updated = true;
         }

@@ -3,13 +3,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 pub mod comm;
-pub mod control;
 pub mod gps;
+pub mod kinetics;
 pub mod transceiver;
 pub mod util;use std::{cell::RefCell, rc::Rc};
 
 use comm::{Comm, CommMsg};
-use control::{Control, Velocity};
+use kinetics::{Kinetics, Velocity};
 use gps::Gps;
 use transceiver::Transceiver;
 
@@ -36,7 +36,7 @@ impl AstroConf {
 pub struct Astro {
     conf: AstroConf,
     gps: Gps,
-    ctrl: Control,
+    kntc: Kinetics,
     comm: Comm,
 }
 
@@ -48,7 +48,7 @@ impl Astro {
         Astro {
             conf,
             gps: Gps::new(&transceiver),
-            ctrl: Control::new(&transceiver),
+            kntc: Kinetics::new(&transceiver),
             comm: Comm::new(&transceiver),
         }
     }
@@ -76,7 +76,7 @@ impl Astro {
 
     pub fn event_step(&mut self) {
         self.gps.update();
-        self.ctrl.set_v(&Velocity {vx: 0.0, vy: 0.0, vz: 0.0});
+        self.kntc.set_v(&Velocity {vx: 0.0, vy: 0.0, vz: 0.0});
         let msg = CommMsg {
             from_id: self.conf.id,
             to_id: 0,
@@ -84,7 +84,7 @@ impl Astro {
         self.comm.send_msg(&msg);
         let msgs = self.comm.receive_msgs();
         if self.conf.id == 1 {
-            dbg!(self.conf.id, self.gps.read_pos(), self.ctrl.read_v(), &msgs);
+            dbg!(self.conf.id, self.gps.read_pos(), self.kntc.read_v(), &msgs);
         }
     }
 }

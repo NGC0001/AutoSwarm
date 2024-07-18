@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::transceiver::Transceiver;
 
-pub const CHANNEL: &str = "CTRL";
+pub const CHANNEL: &str = "KNTC";
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {
@@ -14,18 +14,18 @@ pub struct Velocity {
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
-pub struct ControlMsg {
+pub struct KntcMsg {
     pub v: Velocity,
 }
 
-pub struct Control {
+pub struct Kinetics {
     v: Velocity,
     tc: Rc<RefCell<Transceiver>>,
 }
 
-impl Control {
-    pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Control {
-        Control {
+impl Kinetics {
+    pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Kinetics {
+        Kinetics {
             v: Velocity {vx: 0.0, vy: 0.0, vz: 0.0},
             tc: tc.clone(),
         }
@@ -37,11 +37,11 @@ impl Control {
 
     pub fn set_v(&mut self, v: &Velocity) {
         self.v = *v;
-        self.send_ctrl_msg();
+        self.send_kntc_msg();
     }
 
-    pub fn send_ctrl_msg(&self) {
-        let msg = ControlMsg {v: self.v};
+    pub fn send_kntc_msg(&self) {
+        let msg = KntcMsg {v: self.v};
         (*self.tc).borrow_mut().send(CHANNEL, &msg);
     }
 }
