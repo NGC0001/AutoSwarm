@@ -4,7 +4,7 @@ use std::time::Instant;
 use std::rc::Rc;
 
 use astro::comm;
-use astro::kinetics::{self, Position, Velocity, KntcMsg};
+use astro::kinetics::{self, Position, Velocity, KntcMsg, distance};
 use astro::gps::{self, GpsMsg};
 use astro::transceiver::Transceiver;
 
@@ -93,7 +93,7 @@ impl UavSim {
             if pack.id == self.conf.id {
                 continue;  // filtering out messages sent by itself
             }
-            if pack.msg_out_distance < Self::calc_distance(&pack.p, &self.p) {
+            if pack.msg_out_distance < distance(&pack.p, &self.p) {
                 continue;  // filtering out messages sent by far-awary UAVs
             }
             for msg in &pack.data_vec {
@@ -103,14 +103,6 @@ impl UavSim {
     }
 
     pub fn overlap_with_uav_at(&self, other_p: &Position) -> bool {  // assuming same radius
-        Self::calc_distance(&self.p, other_p) <= 2.0 * self.conf.radius
-    }
-
-    fn calc_distance(p1: &Position, p2: &Position) -> f32 {
-        (
-            f32::powi(p1.x - p2.x, 2) + 
-            f32::powi(p1.y - p2.y, 2) + 
-            f32::powi(p1.z - p2.z, 2)
-        ).sqrt()
+        distance(&self.p, other_p) <= 2.0 * self.conf.radius
     }
 }

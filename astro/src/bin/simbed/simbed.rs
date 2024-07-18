@@ -21,7 +21,7 @@ pub struct SimBed {
 impl SimBed {
     pub fn new(num_uav: u32, astro_bin: &String) -> SimBed {
         let mut uavs: Vec<Uav> = vec![];
-        for id in 1..=num_uav {
+        for id in 0..num_uav {
             let init_p = Position {
                 x: 0.0 + (id as f32) * uavconf::DEFAULT_MSG_OUT_DISTANCE / 1.8,
                 y: 0.0,

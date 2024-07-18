@@ -28,6 +28,16 @@ pub struct Displacement {  // m
     pub z: f32,
 }
 
+impl Displacement {
+    pub fn norm(&self) -> f32 {
+        (
+            f32::powi(self.x, 2) + 
+            f32::powi(self.y, 2) + 
+            f32::powi(self.z, 2)
+        ).sqrt()
+    }
+}
+
 impl ops::Mul<Duration> for &Velocity {
     type Output = Displacement;
 
@@ -46,6 +56,42 @@ impl ops::Mul<Duration> for Velocity {
 
     fn mul(self, dt: Duration) -> Self::Output {
         &self * dt
+    }
+}
+
+impl ops::Sub<&Position> for &Position {
+    type Output = Displacement;
+
+    fn sub(self, ref_p: &Position) -> Self::Output {
+        Displacement {
+            x: self.x - ref_p.x,
+            y: self.y - ref_p.y,
+            z: self.z - ref_p.z,
+        }
+    }
+}
+
+impl ops::Sub<&Position> for Position {
+    type Output = Displacement;
+
+    fn sub(self, ref_p: &Position) -> Self::Output {
+        &self - ref_p
+    }
+}
+
+impl ops::Sub<Position> for &Position {
+    type Output = Displacement;
+
+    fn sub(self, ref_p: Position) -> Self::Output {
+        self - &ref_p
+    }
+}
+
+impl ops::Sub<Position> for Position {
+    type Output = Displacement;
+
+    fn sub(self, ref_p: Position) -> Self::Output {
+        &self - &ref_p
     }
 }
 
@@ -69,6 +115,22 @@ impl ops::Add<Displacement> for &Position {
     }
 }
 
+impl ops::Add<&Displacement> for Position {
+    type Output = Position;
+
+    fn add(self, d: &Displacement) -> Self::Output {
+        &self + d
+    }
+}
+
+impl ops::Add<Displacement> for Position {
+    type Output = Position;
+
+    fn add(self, d: Displacement) -> Self::Output {
+        &self + &d
+    }
+}
+
 impl ops::AddAssign<&Displacement> for Position {
     fn add_assign(&mut self, d: &Displacement) {
         self.x += d.x;
@@ -81,6 +143,10 @@ impl ops::AddAssign<Displacement> for Position {
     fn add_assign(&mut self, d: Displacement) {
         *self += &d;
     }
+}
+
+pub fn distance(p1: &Position, p2: &Position) -> f32 {
+    (p1 - p2).norm()
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
