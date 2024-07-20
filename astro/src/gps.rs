@@ -8,7 +8,7 @@ use super::transceiver::Transceiver;
 
 pub const CHANNEL: &str = "GPS_";
 
-#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct GpsMsg {
     pub p: Position,
 }

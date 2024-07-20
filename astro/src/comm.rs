@@ -7,10 +7,10 @@ use super::transceiver::Transceiver;
 
 pub const CHANNEL: &str = "COMM";
 
-#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct CommMsg {
     pub from_id: u32,  // message sender
-    pub to_id: Option<u32>,  // target message receiver, 0 means broadcasting
+    pub to_ids: Option<Vec<u32>>,  // target message receivers, None means broadcasting
 }
 
 pub struct Comm {

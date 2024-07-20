@@ -22,6 +22,7 @@ pub struct Velocity {  // m/s
     pub vz: f32,
 }
 
+#[derive(Copy, Clone)]
 pub struct Displacement {  // m
     pub x: f32,
     pub y: f32,
@@ -149,7 +150,7 @@ pub fn distance(p1: &Position, p2: &Position) -> f32 {
     (p1 - p2).norm()
 }
 
-#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct KntcMsg {
     pub v: Velocity,
 }
