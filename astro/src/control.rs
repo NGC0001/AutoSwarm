@@ -5,6 +5,7 @@ use super::astroconf::AstroConf;
 use super::kinetics::{Position, Velocity};
 use super::comm::CommMsg;
 
+mod conn;
 mod uav;
 
 use uav::Uav;

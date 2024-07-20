@@ -8,7 +8,6 @@ pub mod comm;
 pub mod control;
 pub mod gps;
 pub mod kinetics;
-pub mod neighbourhood;
 pub mod transceiver;
 pub mod util;
 
