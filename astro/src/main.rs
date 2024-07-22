@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use astro::{Astro, astroconf::AstroConf};
+use astro::{Astro, AstroConf};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -9,6 +9,8 @@ struct Args {
     id: u32,
     #[arg(long)]
     uav_radius: f32,
+    #[arg(long)]
+    msg_range: f32,
 }
 
 fn main() {
@@ -16,6 +18,7 @@ fn main() {
     let conf = AstroConf {
         id: args.id,
         uav_radius: args.uav_radius,
+        msg_range: args.msg_range,
     };
     conf.validate().unwrap();
     let mut astro = Astro::new(conf);

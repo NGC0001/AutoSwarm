@@ -49,6 +49,7 @@ impl Uav {
         Command::new(bin)
             .arg("--id").arg(conf.id.to_string())
             .arg("--uav-radius").arg(conf.radius.to_string())
+            .arg("--msg-range").arg(conf.msg_out_distance.to_string())
             .spawn().unwrap()
     }
 
