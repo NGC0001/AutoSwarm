@@ -21,10 +21,10 @@ pub struct Gps {
 }
 
 impl Gps {
-    pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Gps {
+    pub fn new(tc: &Rc<RefCell<Transceiver>>, p_init: &Position) -> Gps {
         Gps {
-            p: Position {x: 0.0, y: 0.0, z: 0.0},
-            p_predict: Position {x: 0.0, y: 0.0, z: 0.0},
+            p: *p_init,
+            p_predict: *p_init,
             p_predict_t: Instant::now(),
             tc: tc.clone(),
         }

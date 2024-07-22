@@ -161,9 +161,9 @@ pub struct Kinetics {
 }
 
 impl Kinetics {
-    pub fn new(tc: &Rc<RefCell<Transceiver>>) -> Kinetics {
+    pub fn new(tc: &Rc<RefCell<Transceiver>>, v_init: &Velocity) -> Kinetics {
         Kinetics {
-            v: Velocity {vx: 0.0, vy: 0.0, vz: 0.0},
+            v: *v_init,
             tc: tc.clone(),
         }
     }
