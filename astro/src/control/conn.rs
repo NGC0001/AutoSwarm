@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use super::Position;
-use super::CommMsg;
+use super::{Position, CommMsg, Sid};
 use super::super::kinetics::distance;
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
@@ -36,28 +35,29 @@ impl Connection {
     }
 
     // messages should be ordered by arrival time
-    pub fn update(&mut self, p_self: &Position, msgs_in: &Vec<CommMsg>)
-    -> (Vec<u32>, Vec<u32>) {
+    pub fn update<'a>(&mut self, p_self: &Position, msgs_in: &'a Vec<CommMsg>)
+    -> (Vec<&'a Sid>, Vec<u32>) {
         self.p_self = *p_self;
-        let mut p_map: HashMap<u32, &Position> = HashMap::new();
+        // m_map stores the newest message (with fresh position and sid) from a uav
+        let mut m_map: HashMap<u32, &'a CommMsg> = HashMap::new();
         for msg in msgs_in {
-            p_map.entry(msg.from_id)
-                .and_modify(|p| { *p = &msg.from_p; })
-                .or_insert(&msg.from_p);
+            m_map.entry(msg.from_sid.0)
+                .and_modify(|p| { *p = msg; })
+                .or_insert(msg);
         }
         let now = Instant::now();
-        let (add, mut rm) = self.update_by_msg_positions(now, &p_map);
+        let (add, mut rm) = self.update_by_msg_positions(now, &m_map);
         self.filter_out_lost_targets(now);
         rm.append(&mut self.filter_out_lost_targets(now));  // should contain no duplicate ids
         (add, rm)
     }
 
-    fn update_by_msg_positions(&mut self, msg_time: Instant, p_map: &HashMap<u32, &Position>)
-    -> (Vec<u32>, Vec<u32>) {
-        let mut add: Vec<u32> = vec![];
+    fn update_by_msg_positions<'a>(&mut self, msg_time: Instant, m_map: &HashMap<u32, &'a CommMsg>)
+    -> (Vec<&'a Sid>, Vec<u32>) {
+        let mut add: Vec<&'a Sid> = vec![];
         let mut rm: Vec<u32> = vec![];
-        for (id_other, p_other) in p_map {
-            let d = distance(p_other, &self.p_self);
+        for (id_other, msg) in m_map {
+            let d = distance(&msg.from_p, &self.p_self);
             match self.targets_in_range.get_mut(id_other) {
                 Some(t) => {
                     if d > self.msg_range * self.out_of_range_threshold {
@@ -70,10 +70,10 @@ impl Connection {
                 None => {
                     if d <= self.msg_range * self.in_range_threshold {
                         self.targets_in_range.insert(*id_other, Target {
-                            p: **p_other,
+                            p: msg.from_p,
                             last_heard: msg_time,
                         });
-                        add.push(*id_other);
+                        add.push(&msg.from_sid);
                     }
                 },
             }
@@ -92,5 +92,18 @@ impl Connection {
             self.targets_in_range.remove(id);
         }
         rm
+    }
+
+    pub fn filter_messages<'a>(&self, msgs: &'a Vec<CommMsg>) -> Vec<&'a CommMsg> {
+        let mut msg_filtered: Vec<&CommMsg> = vec![];
+        for msg in msgs {
+            match self.targets_in_range.get(&msg.from_sid.0) {
+                None => (),
+                Some(_) => {
+                    msg_filtered.push(msg);
+                }
+            }
+        }
+        msg_filtered
     }
 }
