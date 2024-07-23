@@ -48,8 +48,7 @@ pub struct GrpState {
     level: GrpLevel,
     members: HashMap<u32, Member>,  // connection graph of the group
     parent: Option<GrpDesc>,
-    left: Option<GrpDesc>,
-    right: Option<GrpDesc>,
+    children: Vec<GrpDesc>,
 }
 
 impl GrpState {
@@ -60,8 +59,7 @@ impl GrpState {
                 (id, Member::new(p)),
             ]),
             parent: None,
-            left: None,
-            right: None,
+            children: vec![],
         }
     }
 }
