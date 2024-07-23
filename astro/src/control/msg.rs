@@ -9,6 +9,14 @@ use super::Position;
 pub type Nid = Vec<u32>;
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct NodeDesc {
+    pub id: u32,
+    pub p: Position,
+    pub subswarm_size: u32,  // up-flowing data
+    pub swarm_size: u32,  // down-flowing data
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Msg {
     pub from_nid: Nid,  // structural id of message sender
     pub from_p: Position,  // position of message sender

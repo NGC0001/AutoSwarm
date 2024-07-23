@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use super::{Position, Nid, Msg};
+use super::Position;
+use super::msg::{Nid, Msg};
 use super::super::kinetics::distance;
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
