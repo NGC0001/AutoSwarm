@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use super::{Position, CommMsg, Sid};
+use super::{Position, Nid, Msg};
 use super::super::kinetics::distance;
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
@@ -13,6 +13,7 @@ struct Target {
     last_heard: Instant,
 }
 
+// manage the connections with neighbour uavs.
 pub struct Connection {
     p_self: Position,
     targets_in_range: HashMap<u32, Target>,
@@ -35,13 +36,14 @@ impl Connection {
     }
 
     // messages should be ordered by arrival time
-    pub fn update<'a>(&mut self, p_self: &Position, msgs_in: &'a Vec<CommMsg>)
-    -> (Vec<&'a Sid>, Vec<u32>) {
+    pub fn update<'a>(&mut self, p_self: &Position, msgs_in: &'a Vec<Msg>)
+    -> (Vec<&'a Nid>, Vec<u32>) {
         self.p_self = *p_self;
         // m_map stores the newest message (with fresh position and sid) from a uav
-        let mut m_map: HashMap<u32, &'a CommMsg> = HashMap::new();
+        let mut m_map: HashMap<u32, &'a Msg> = HashMap::new();
         for msg in msgs_in {
-            m_map.entry(msg.from_sid.0)
+            let from_id: u32 = *msg.from_nid.last().unwrap();
+            m_map.entry(from_id)
                 .and_modify(|p| { *p = msg; })
                 .or_insert(msg);
         }
@@ -54,9 +56,9 @@ impl Connection {
 
     // this algorithm does not ensure symmetry.
     // "a in connection with b" does not ensure "b in connection with a".
-    fn update_by_msg_positions<'a>(&mut self, msg_time: Instant, m_map: &HashMap<u32, &'a CommMsg>)
-    -> (Vec<&'a Sid>, Vec<u32>) {
-        let mut add: Vec<&'a Sid> = vec![];
+    fn update_by_msg_positions<'a>(&mut self, msg_time: Instant, m_map: &HashMap<u32, &'a Msg>)
+    -> (Vec<&'a Nid>, Vec<u32>) {
+        let mut add: Vec<&'a Nid> = vec![];
         let mut rm: Vec<u32> = vec![];
         for (id_other, msg) in m_map {
             let d = distance(&msg.from_p, &self.p_self);
@@ -75,7 +77,7 @@ impl Connection {
                             p: msg.from_p,
                             last_heard: msg_time,
                         });
-                        add.push(&msg.from_sid);
+                        add.push(&msg.from_nid);
                     }
                 },
             }
@@ -96,10 +98,11 @@ impl Connection {
         rm
     }
 
-    pub fn filter_messages<'a>(&self, msgs: &'a Vec<CommMsg>) -> Vec<&'a CommMsg> {
-        let mut msg_filtered: Vec<&CommMsg> = vec![];
+    pub fn filter_messages<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
+        let mut msg_filtered: Vec<&Msg> = vec![];
         for msg in msgs {
-            match self.targets_in_range.get(&msg.from_sid.0) {
+            let from_id: u32 = *msg.from_nid.last().unwrap();
+            match self.targets_in_range.get(&from_id) {
                 None => (),
                 Some(_) => {
                     msg_filtered.push(msg);
