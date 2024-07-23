@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::Position;
-use super::{GrpId, GrpLevel, Sid, Member, GrpConn, GrpState};
+use super::{GrpId, GrpLevel, Sid, Member, GrpDesc, GrpState};
 
 pub struct Group {
     state: GrpState,

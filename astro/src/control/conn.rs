@@ -52,6 +52,8 @@ impl Connection {
         (add, rm)
     }
 
+    // this algorithm does not ensure symmetry.
+    // "a in connection with b" does not ensure "b in connection with a".
     fn update_by_msg_positions<'a>(&mut self, msg_time: Instant, m_map: &HashMap<u32, &'a CommMsg>)
     -> (Vec<&'a Sid>, Vec<u32>) {
         let mut add: Vec<&'a Sid> = vec![];

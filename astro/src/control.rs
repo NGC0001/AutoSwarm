@@ -3,7 +3,7 @@ use std::rc::Rc;
 use super::astroconf::AstroConf;
 use super::kinetics::{Position, Velocity};
 use super::comm::CommMsg;
-use super::groupstate::{GrpId, GrpLevel, Sid, Member, GrpConn, GrpState};
+use super::groupstate::{GrpId, GrpLevel, Sid, Member, GrpDesc, GrpState};
 
 mod conn;
 mod group;
@@ -14,20 +14,18 @@ use group::Group;
 pub struct Control {
     conf: Rc<AstroConf>,
     conn: Connection,
-    next_group_tag: u32,
+    next_tag: u32,
     group: Group,
-    swarm_size: u32,
 }
 
 impl Control {
     pub fn new(conf: &Rc<AstroConf>, p: &Position) -> Control {
-        let group_tag = 0;
+        let init_tag = 0;
         Control {
             conf: conf.clone(),
             conn: Connection::new(p, conf.msg_range),
-            next_group_tag: group_tag + 1,
-            group: Group::new_soliton(conf.id, p, group_tag),
-            swarm_size: 1,
+            next_tag: init_tag + 1,
+            group: Group::new_soliton(conf.id, p, init_tag),
         }
     }
 
