@@ -7,7 +7,7 @@ mod conn;
 mod msg;
 mod nm;
 
-pub use msg::{Nid, Msg};
+pub use msg::{Nid, nid2id, NodeDesc, Msg};
 
 use conn::Connection;
 use nm::NodeManager;
@@ -19,23 +19,34 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn new(conf: &Rc<AstroConf>, p: &Position) -> Control {
+    pub fn new(conf: &Rc<AstroConf>, p: &Position, v: &Velocity) -> Control {
         Control {
             conf: conf.clone(),
             conn: Connection::new(p, conf.msg_range),
-            nm: NodeManager::new_root(conf.id, p),
+            nm: NodeManager::new_root(conf.id, p, v),
         }
     }
 
-    pub fn process(&mut self, p: &Position, v: &Velocity, msgs_in: &Vec<Msg>)
+    pub fn update(&mut self, p: &Position, v: &Velocity, msgs_in: &Vec<Msg>)
     -> (Velocity, Vec<Msg>) {
-        let (add, rm) = self.conn.update(p, msgs_in);
-        let msgs_in_range = self.conn.filter_messages(msgs_in);
-        self.nm.update_node_conn(p, &rm);
+        let (_, rm) = self.conn.update(p, msgs_in);
+        let msgs_in_range = self.conn.pick_messages_in_range(msgs_in);
+        let msgs = self.pick_messages(&msgs_in_range);
+        self.nm.update_node(p, v, &rm, &msgs);
 
-        let next_v = Velocity {vx: 0.0, vy: 0.0, vz: 0.0};
         let mut msgs_out: Vec<Msg> = vec![];
         msgs_out.push(self.nm.generate_desc_msg());
+        let next_v = self.nm.calc_next_v();
         (next_v, msgs_out)
+    }
+
+    fn pick_messages<'a>(&self, msgs_all: &Vec<&'a Msg>) -> Vec<&'a Msg> {
+        let mut msgs: Vec<&Msg> = vec![];
+        for msg in msgs_all {
+            if msg.to_ids.contains(&self.conf.id) {
+                msgs.push(msg);
+            }
+        }
+        msgs
     }
 }

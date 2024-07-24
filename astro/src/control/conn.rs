@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use super::Position;
-use super::msg::{Nid, Msg};
+use super::{nid2id, Msg, Nid, NodeDesc};
 use super::super::kinetics::distance;
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
@@ -10,8 +10,22 @@ pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.9;
 pub const DEFAULT_LOST_DURATION: Duration = Duration::from_secs(3);
 
 struct Target {
-    p: Position,
+    desc: NodeDesc,
     last_heard: Instant,
+}
+
+impl Target {
+    pub fn from_msg(msg_time: Instant, msg: &Msg) -> Target {
+        Target {
+            desc: msg.sender.clone(),
+            last_heard: msg_time,
+        }
+    }
+
+    pub fn update_from_msg(&mut self, msg_time: Instant, msg: &Msg) {
+        self.desc = msg.sender.clone();
+        self.last_heard = msg_time;
+    }
 }
 
 // manage the connections with neighbour uavs.
@@ -44,9 +58,9 @@ impl Connection {
         // m_map stores the newest message (with fresh position and sid) from a uav
         let mut m_map: HashMap<u32, &'a Msg> = HashMap::new();
         for msg in msgs_in {
-            let from_id: u32 = *msg.from_nid.last().unwrap();
+            let from_id: u32 = nid2id(&msg.sender.nid);
             m_map.entry(from_id)
-                .and_modify(|p| { *p = msg; })
+                .and_modify(|m| { *m = msg; })
                 .or_insert(msg);
         }
         let now = Instant::now();
@@ -63,24 +77,25 @@ impl Connection {
         let mut add: Vec<&'a Nid> = vec![];
         let mut rm: Vec<u32> = vec![];
         for (id_other, msg) in m_map {
-            let d = distance(&msg.from_p, &self.p_self);
+            let d = distance(&msg.sender.p, &self.p_self);
             match self.targets_in_range.get_mut(id_other) {
                 Some(t) => {
                     if d > self.msg_range * self.out_of_range_threshold {
+                        // existing target goes out of range
                         self.targets_in_range.remove(id_other);
                         rm.push(*id_other);
                     } else {
-                        t.last_heard = msg_time;
+                        // existing target stays in range
+                        t.update_from_msg(msg_time, msg);
                     }
                 },
                 None => {
                     if d <= self.msg_range * self.in_range_threshold {
-                        self.targets_in_range.insert(*id_other, Target {
-                            p: msg.from_p,
-                            last_heard: msg_time,
-                        });
-                        add.push(&msg.from_nid);
+                        // new target goes into range
+                        self.targets_in_range.insert(*id_other, Target::from_msg(msg_time, msg));
+                        add.push(&msg.sender.nid);
                     }
+                    // else: new target out of range, irrelative
                 },
             }
         }
@@ -100,17 +115,17 @@ impl Connection {
         rm
     }
 
-    pub fn filter_messages<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
-        let mut msg_filtered: Vec<&Msg> = vec![];
+    pub fn pick_messages_in_range<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
+        let mut msg_in_range: Vec<&Msg> = vec![];
         for msg in msgs {
-            let from_id: u32 = *msg.from_nid.last().unwrap();
+            let from_id: u32 = nid2id(&msg.sender.nid);
             match self.targets_in_range.get(&from_id) {
                 None => (),
                 Some(_) => {
-                    msg_filtered.push(msg);
+                    msg_in_range.push(msg);
                 }
             }
         }
-        msg_filtered
+        msg_in_range
     }
 }

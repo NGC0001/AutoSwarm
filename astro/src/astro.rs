@@ -35,7 +35,7 @@ impl Astro {
             gps: Gps::new(&transceiver, &p_dummy),
             kntc: Kinetics::new(&transceiver, &v_dummy),
             comm: Comm::new(&transceiver),
-            ctrl: Control::new(&conf, &p_dummy),
+            ctrl: Control::new(&conf, &p_dummy, &v_dummy),
         }
     }
 
@@ -65,7 +65,7 @@ impl Astro {
         let curr_v = self.kntc.read_v();
         let curr_p = self.gps.predict_pos(&curr_v);
         let msgs = self.comm.receive_msgs();
-        let (next_v, msgs_out) = self.ctrl.process(&curr_p, &curr_v, &msgs);
+        let (next_v, msgs_out) = self.ctrl.update(&curr_p, &curr_v, &msgs);
         self.kntc.set_v(&next_v);
         self.comm.send_msgs(&msgs_out);
     }
