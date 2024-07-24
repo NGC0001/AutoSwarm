@@ -36,7 +36,8 @@ impl Connection {
         }
     }
 
-    // messages should be ordered by arrival time
+    // messages should be ordered by arrival time.
+    // returned `add` and `rm` should not overlap.
     pub fn update<'a>(&mut self, p_self: &Position, msgs_in: &'a Vec<Msg>)
     -> (Vec<&'a Nid>, Vec<u32>) {
         self.p_self = *p_self;

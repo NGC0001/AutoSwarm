@@ -23,7 +23,7 @@ impl Control {
         Control {
             conf: conf.clone(),
             conn: Connection::new(p, conf.msg_range),
-            nm: NodeManager::new_root(conf.id),
+            nm: NodeManager::new_root(conf.id, p),
         }
     }
 
@@ -31,11 +31,11 @@ impl Control {
     -> (Velocity, Vec<Msg>) {
         let (add, rm) = self.conn.update(p, msgs_in);
         let msgs_in_range = self.conn.filter_messages(msgs_in);
-        self.nm.check_removed_conn(&rm);
-        self.nm.check_added_conn(&add);
+        self.nm.update_node_conn(p, &rm);
 
         let next_v = Velocity {vx: 0.0, vy: 0.0, vz: 0.0};
         let mut msgs_out: Vec<Msg> = vec![];
+        msgs_out.push(self.nm.generate_desc_msg());
         (next_v, msgs_out)
     }
 }
