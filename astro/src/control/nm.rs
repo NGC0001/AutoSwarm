@@ -1,44 +1,71 @@
 use std::option::Option;
+use std::rc::Rc;
+use std::time::{Duration, Instant};
 
-use crate::kinetics::{Position, Velocity};
+use super::super::astroconf::AstroConf;
+use super::super::kinetics::{Position, Velocity};
+use super::msg::{Nid, id_of, parent_id_of, valid_descendant_of};
+use super::msg::{NodeDesc, MsgBody, Msg};
 
-use super::msg::{Nid, nid2id, parent_id_from_nid, NodeDesc, Msg};
+pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
+
+struct Node {
+    desc: NodeDesc,
+    last_heard: Instant,
+}
 
 pub struct NodeManager {
+    conf: Rc<AstroConf>,
     nid: Nid,
-    parent: Option<NodeDesc>,  // need backup ids (indirect upper nodes / sibling nodes)
-    children: Vec<NodeDesc>,
+    parent: Option<Node>,  // need backup ids (indirect upper nodes / sibling nodes)
+    children: Vec<Node>,
+    node_lost_duration: Duration,
     p: Position,
     v: Velocity,
 }
 
 impl NodeManager {
-    pub fn new_root(id: u32, p: &Position, v: &Velocity) -> NodeManager {
+    pub fn new_root(conf: &Rc<AstroConf>, p: &Position, v: &Velocity) -> NodeManager {
         NodeManager {
-            nid: vec![id],
+            conf: conf.clone(),
+            nid: vec![conf.id],
             parent: None,
             children: vec![],
+            node_lost_duration: DEFAULT_NODE_LOST_DURATION,
             p: *p,
             v: *v,
         }
     }
 
     pub fn calc_next_v(&self) -> Velocity {
-        unimplemented!("next v");
-        Velocity {
-            vx: 0.0,
-            vy: 0.0,
-            vz: 0.0,
+        match &self.parent {
+            None => Velocity::zero(),
+            Some(pn) => {
+                // TODO: this is a bad algorithm.
+                // need to take parent velocity into account.
+                let s = &pn.desc.p - &self.p;
+                let dist: f32 = s.norm();
+                if dist < self.conf.msg_range / 3.0 {
+                    Velocity::zero()
+                } else {
+                    let factor: f32 = (self.conf.max_v / 2.0) / dist;
+                    Velocity {
+                        vx: s.x * factor,
+                        vy: s.y * factor,
+                        vz: s.z * factor,
+                    }
+                }
+            },
         }
     }
 
     pub fn generate_desc_msg(&self) -> Msg {
         let mut to_ids: Vec<u32> = vec![];
         if let Some(nd) = &self.parent {
-            to_ids.push(nid2id(&nd.nid));
+            to_ids.push(id_of(&nd.desc.nid));
         }
         for nd in &self.children {
-            to_ids.push(nid2id(&nd.nid));
+            to_ids.push(id_of(&nd.desc.nid));
         }
         let mut msg = Msg::new(self.generate_node_desc());
         msg.to_ids.append(&mut to_ids);
@@ -48,87 +75,131 @@ impl NodeManager {
     pub fn generate_node_desc(&self) -> NodeDesc {
         let mut subswarm_size: u32 = 1;
         for nd in &self.children {
-            subswarm_size += nd.subswarm_size;
+            subswarm_size += nd.desc.subswm;
         }
         let swarm_size: u32 = match &self.parent {
             None => subswarm_size,
-            Some(nd) => nd.swarm_size,
+            Some(nd) => nd.desc.swm,
         };
         NodeDesc {
             nid: self.nid.clone(),
+            cids: self.children.iter().map(|nd| id_of(&nd.desc.nid)).collect(),
             p: self.p,
             v: self.v,
-            subswarm_size,
-            swarm_size,
+            subswm: subswarm_size,
+            swm: swarm_size,
         }
     }
 
     pub fn update_node(&mut self, p: &Position, v: &Velocity, rm: &Vec<u32>, msgs: &Vec<&Msg>) {
         self.p = *p;
         self.v = *v;
-        if self.should_remove_parent(rm) {
-            self.remove_parent();
-        }
-        self.children.retain(|ndesc| !rm.contains(&nid2id(&ndesc.nid)));
+        self.remove_no_connection_nodes(rm);
+        let now = Instant::now();
         for msg in msgs {
-            self.update_desc(&msg.sender);
+            self.process_msg(now, msg);
         }
+        self.remove_lost_nodes(now);
     }
 
-    fn should_remove_parent(&self, rm: &Vec<u32>) -> bool {
-        match &self.parent {
-            None => false,
-            Some(pnd) => {  // parent node
-                let pid = nid2id(&pnd.nid);  // parent id
-                rm.contains(&pid)
-            },
+    fn remove_no_connection_nodes(&mut self, rm: &Vec<u32>) {
+        if self.parent.as_ref().is_some_and(|pnd| rm.contains(&id_of(&pnd.desc.nid))) {
+            self.remove_parent();
         }
+        self.children.retain(|ndesc| !rm.contains(&id_of(&ndesc.desc.nid)));
     }
 
     fn remove_parent(&mut self) {
-        let id: u32 = nid2id(&self.nid);
+        let id: u32 = id_of(&self.nid);
         self.parent = None;
         self.nid = vec![id];
     }
 
-    fn update_desc(&mut self, desc: &NodeDesc) -> bool {
-        self.update_parent_desc(desc) || self.update_child_desc(desc)
-    }
-
-    // TODO: when c recognise p as its parent, what if p does not recognise c as its child?
-    fn update_parent_desc(&mut self, desc: &NodeDesc) -> bool {
-        match &mut self.parent {
-            None => false,
-            Some(pnd) => {
-                if nid2id(&pnd.nid) != nid2id(&desc.nid) {
-                    false
-                } else {  // the description is from recognised parent
-                    let id = nid2id(&self.nid);
-                    if desc.nid.contains(&id) {  // invalid parent, remove it
-                        self.remove_parent();
-                    } else {  // update parent description
-                        *pnd = desc.clone();
-                        self.nid = desc.nid.clone();
-                        self.nid.push(id);
-                    }
-                    true
-                }
-            },
+    fn process_msg(&mut self, now: Instant, msg: &Msg) {
+        let desc_sdr = &msg.sender;
+        self.update_desc(now, desc_sdr);
+        match msg.body {
+            MsgBody::JOIN => self.add_child(now, desc_sdr),
+            MsgBody::LEAVE => self.remove_child(id_of(&desc_sdr.nid)),
+            MsgBody::KEEPALIVE => (),
         }
     }
 
-    fn update_child_desc(&mut self, desc: &NodeDesc) -> bool {
-        let id = nid2id(&self.nid);
-        for (idx, cnd) in self.children.iter_mut().enumerate() {
-            if nid2id(&cnd.nid) == nid2id(&desc.nid) {  // the description is from a recognised child
-                if parent_id_from_nid(&desc.nid).is_some_and(|v| v == id) {  // update description
-                    *cnd = desc.clone();
-                } else {  // the child does not recognised this node as its parent, remove it
-                    self.children.remove(idx);
-                }
-                return true;
+    fn add_child(&mut self, now: Instant, desc: &NodeDesc) {
+        let id_other = id_of(&desc.nid);
+        if self.is_parent_or_child(id_other) {
+            // the other node is already a recognised child
+            return;
+        }
+        if !valid_descendant_of(id_other, &self.nid) {
+            // the other node is not a valid child of this node
+            return;
+        }
+        self.children.push(Node {
+            desc: desc.clone(),
+            last_heard: now,
+        })
+    }
+
+    fn remove_child(&mut self, id_other: u32) {
+        self.children.retain(|cnd| id_of(&cnd.desc.nid) != id_other);
+    }
+
+    fn is_parent_or_child(&self, id_other: u32) -> bool {
+        self.is_parent(id_other) || self.is_child(id_other)
+    }
+
+    fn is_parent(&self, id_other: u32) -> bool {
+        self.parent.as_ref().is_some_and(|pnd| id_of(&pnd.desc.nid) == id_other)
+    }
+
+    fn is_child(&self, id_other: u32) -> bool {
+        self.children.iter().any(|cnd| id_of(&cnd.desc.nid) == id_other)
+    }
+
+    fn update_desc(&mut self, now: Instant, desc: &NodeDesc) {
+        if !self.is_parent(id_of(&desc.nid)) {
+            // the description is not from parent, check child descriptions
+            self.update_child_desc(now, desc);
+            return;
+        }
+        // the description is from recognised parent
+        let pnd = self.parent.as_mut().unwrap();
+        let id = id_of(&self.nid);
+        if valid_descendant_of(id, &desc.nid) && desc.cids.contains(&id) {
+            // valid parent,
+            // and the parent recognise this node as its child.
+            pnd.desc = desc.clone();
+            pnd.last_heard = now;
+            self.nid = desc.nid.clone();
+            self.nid.push(id);
+        }  // otherwise, just wait the parent to timeout and be removed
+    }
+
+    fn update_child_desc(&mut self, now: Instant, desc: &NodeDesc) {
+        let id = id_of(&self.nid);
+        for cnd in &mut self.children {
+            let id_other = id_of(&desc.nid);
+            if id_of(&cnd.desc.nid) == id_other {
+                // the description is from a recognised child
+                if valid_descendant_of(id_other, &self.nid)
+                    && parent_id_of(&desc.nid).is_some_and(|v| v == id) {
+                    // valid child,
+                    // and the child recognised this node as its parent.
+                    cnd.desc = desc.clone();
+                    cnd.last_heard = now;
+                }  // otherwise, just wait the child to timeout and be removed
+                return;
             }
         }
-        false
+    }
+
+    fn remove_lost_nodes(&mut self, now: Instant) {
+        if let Some(nd) = &self.parent {
+            if now - nd.last_heard > self.node_lost_duration {
+                self.remove_parent();
+            }
+        }
+        self.children.retain(|nd| now - nd.last_heard <= self.node_lost_duration);
     }
 }

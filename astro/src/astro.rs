@@ -29,8 +29,8 @@ impl Astro {
         let socket_file: String = util::get_socket_name(conf.id);
         let stream = UnixStream::connect(socket_file).unwrap();
         let transceiver = Rc::new(RefCell::new(Transceiver::new(stream)));
-        let p_dummy = Position {x: 0.0, y: 0.0, z: 0.0};
-        let v_dummy = Velocity {vx: 0.0, vy: 0.0, vz: 0.0};
+        let p_dummy = Position::zero();
+        let v_dummy = Velocity::zero();
         Astro {
             gps: Gps::new(&transceiver, &p_dummy),
             kntc: Kinetics::new(&transceiver, &v_dummy),

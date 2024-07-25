@@ -45,7 +45,7 @@ impl UavSim {
             p: conf.init_p,
             p_calc_t: now,
             p_send_t: now - conf.p_send_intrvl,
-            v: Velocity {vx: 0.0, vy: 0.0, vz: 0.0},
+            v: Velocity::zero(),  // initialised with a dummy value
             tc: RefCell::new(Transceiver::new(stream)),
         }
     }

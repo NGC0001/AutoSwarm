@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use super::Position;
-use super::{nid2id, Msg, Nid, NodeDesc};
-use super::super::kinetics::distance;
+use super::super::kinetics::{Position, distance};
+use super::msg::{id_of, Msg, Nid, NodeDesc};
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
 pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.9;
@@ -58,7 +57,7 @@ impl Connection {
         // m_map stores the newest message (with fresh position and sid) from a uav
         let mut m_map: HashMap<u32, &'a Msg> = HashMap::new();
         for msg in msgs_in {
-            let from_id: u32 = nid2id(&msg.sender.nid);
+            let from_id: u32 = id_of(&msg.sender.nid);
             m_map.entry(from_id)
                 .and_modify(|m| { *m = msg; })
                 .or_insert(msg);
@@ -118,7 +117,7 @@ impl Connection {
     pub fn pick_messages_in_range<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
         let mut msg_in_range: Vec<&Msg> = vec![];
         for msg in msgs {
-            let from_id: u32 = nid2id(&msg.sender.nid);
+            let from_id: u32 = id_of(&msg.sender.nid);
             match self.targets_in_range.get(&from_id) {
                 None => (),
                 Some(_) => {

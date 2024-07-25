@@ -11,6 +11,8 @@ struct Args {
     uav_radius: f32,
     #[arg(long)]
     msg_range: f32,
+    #[arg(long)]
+    max_v: f32,
 }
 
 fn main() {
@@ -19,6 +21,7 @@ fn main() {
         id: args.id,
         uav_radius: args.uav_radius,
         msg_range: args.msg_range,
+        max_v: args.max_v,
     };
     conf.validate().unwrap();
     let mut astro = Astro::new(conf);

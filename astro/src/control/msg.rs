@@ -9,11 +9,16 @@ use super::{Position, Velocity};
 pub type Nid = Vec<u32>;
 
 #[inline]
-pub fn nid2id(nid: &Nid) -> u32 {
+pub fn id_of(nid: &Nid) -> u32 {
     *nid.last().unwrap()
 }
 
-pub fn parent_id_from_nid(nid: &Nid) -> Option<u32> {
+#[inline]
+pub fn valid_descendant_of(id: u32, p_nid: &Nid) -> bool {
+    !p_nid.contains(&id)  // non-cyclic
+}
+
+pub fn parent_id_of(nid: &Nid) -> Option<u32> {
     let len = nid.len();
     match len {
         ..=1 => None,
@@ -27,16 +32,26 @@ pub fn parent_id_from_nid(nid: &Nid) -> Option<u32> {
 #[derive(Clone)]
 pub struct NodeDesc {
     pub nid: Nid,  // structural id of node, down-flowing data
+    pub cids: Vec<u32>,  // ids of child nodes
     pub p: Position,
     pub v: Velocity,
-    pub subswarm_size: u32,  // up-flowing data
-    pub swarm_size: u32,  // down-flowing data
+    pub subswm: u32,  // the size of the subswarm, up-flowing data
+    pub swm: u32,  // the size of the swarm, down-flowing data
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub enum MsgBody {
+    KEEPALIVE,
+    JOIN,
+    LEAVE,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Msg {
     pub sender: NodeDesc,  // node description of message sender
     pub to_ids: Vec<u32>,  // target message receivers, None means broadcasting
+
+    pub body: MsgBody,
 }
 
 impl Msg {
@@ -44,6 +59,7 @@ impl Msg {
         Msg {
             sender,
             to_ids: vec![],
+            body: MsgBody::KEEPALIVE,
         }
     }
 }

@@ -7,7 +7,7 @@ mod conn;
 mod msg;
 mod nm;
 
-pub use msg::{Nid, nid2id, NodeDesc, Msg};
+pub use msg::Msg;
 
 use conn::Connection;
 use nm::NodeManager;
@@ -23,7 +23,7 @@ impl Control {
         Control {
             conf: conf.clone(),
             conn: Connection::new(p, conf.msg_range),
-            nm: NodeManager::new_root(conf.id, p, v),
+            nm: NodeManager::new_root(conf, p, v),
         }
     }
 
