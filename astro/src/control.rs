@@ -10,6 +10,7 @@ mod nm;
 pub use msg::Msg;
 
 use conn::Connection;
+use msg::root_id_of;
 use nm::NodeManager;
 
 pub struct Control {
@@ -23,7 +24,7 @@ impl Control {
         Control {
             conf: conf.clone(),
             conn: Connection::new(p, conf.msg_range),
-            nm: NodeManager::new_root(conf, p, v),
+            nm: NodeManager::new_root_node(conf, p, v),
         }
     }
 
@@ -36,6 +37,15 @@ impl Control {
 
         let mut msgs_out: Vec<Msg> = vec![];
         msgs_out.push(self.nm.generate_desc_msg());
+
+        let root_self = self.nm.get_root_id();
+        let mut nodes_on_other_trees = self.conn.get_targets(|desc| root_id_of(&desc.nid) != root_self);
+        if let Some(msg) = self.nm.join_other_tree(&mut nodes_on_other_trees) {
+            msgs_out.push(msg);
+        }
+
+        dbg!(self.nm.get_nid());
+
         let next_v = self.nm.calc_next_v();
         (next_v, msgs_out)
     }

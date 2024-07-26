@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use std::ops::Fn;
 
 use super::super::kinetics::{Position, distance};
 use super::msg::{id_of, Msg, Nid, NodeDesc};
@@ -47,6 +48,18 @@ impl Connection {
             out_of_range_threshold: DEFAULT_OUT_OF_RANGE_THRESHOLD,
             lost_duration: DEFAULT_LOST_DURATION,
         }
+    }
+
+    pub fn get_targets<F>(&self, filter: F) -> Vec<&NodeDesc>
+    where F: Fn(&NodeDesc) -> bool {
+        let mut targets: Vec<&NodeDesc> = vec![];
+        for (_, t) in &self.targets_in_range {
+            let desc: &NodeDesc = &t.desc;
+            if filter(desc) {
+                targets.push(&t.desc);
+            }
+        }
+        targets
     }
 
     // messages should be ordered by arrival time.

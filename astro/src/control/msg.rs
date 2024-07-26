@@ -14,6 +14,11 @@ pub fn id_of(nid: &Nid) -> u32 {
 }
 
 #[inline]
+pub fn root_id_of(nid: &Nid) -> u32 {
+    *nid.first().unwrap()
+}
+
+#[inline]
 pub fn valid_descendant_of(id: u32, p_nid: &Nid) -> bool {
     !p_nid.contains(&id)  // non-cyclic
 }

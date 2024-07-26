@@ -1,10 +1,11 @@
+use std::cmp::Ordering;
 use std::option::Option;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use super::super::astroconf::AstroConf;
 use super::super::kinetics::{Position, Velocity};
-use super::msg::{Nid, id_of, parent_id_of, valid_descendant_of};
+use super::msg::{Nid, id_of, root_id_of, parent_id_of, valid_descendant_of};
 use super::msg::{NodeDesc, MsgBody, Msg};
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
@@ -25,7 +26,7 @@ pub struct NodeManager {
 }
 
 impl NodeManager {
-    pub fn new_root(conf: &Rc<AstroConf>, p: &Position, v: &Velocity) -> NodeManager {
+    pub fn new_root_node(conf: &Rc<AstroConf>, p: &Position, v: &Velocity) -> NodeManager {
         NodeManager {
             conf: conf.clone(),
             nid: vec![conf.id],
@@ -35,6 +36,49 @@ impl NodeManager {
             p: *p,
             v: *v,
         }
+    }
+
+    pub fn join_other_tree(&mut self, candidates: &mut Vec<&NodeDesc>) -> Option<Msg> {
+        candidates.sort_unstable_by(|desc1, desc2| {
+            let swm_cmp = desc1.swm.cmp(&desc2.swm);
+            match swm_cmp {
+                Ordering::Equal => root_id_of(&desc2.nid).cmp(&root_id_of(&desc1.nid)),
+                _ => swm_cmp,
+            }
+        });
+        match candidates.last() {
+            None => None,
+            Some(desc) => {
+                let (swarm_size, _) = self.get_swarm_size();
+                if desc.swm < swarm_size {
+                    None
+                } else if desc.swm == swarm_size && self.get_root_id() <= root_id_of(&desc.nid) {
+                    None
+                } else {
+                    // TODO: wait for swarm_size to update
+                    let mut msg = Msg::new(self.generate_node_desc());
+                    msg.to_ids.push(id_of(&desc.nid));
+                    msg.body = MsgBody::JOIN;
+                    // TODO: update code here and validate the parent
+                    self.parent = Some(Node {
+                        desc: (*desc).clone(),
+                        last_heard: Instant::now(),
+                    });
+                    let id = id_of(&self.nid);
+                    self.nid = desc.nid.clone();
+                    self.nid.push(id);
+                    Some(msg)
+                }
+            },
+        }
+    }
+
+    pub fn get_nid(&self) -> &Nid {
+        &self.nid
+    }
+
+    pub fn get_root_id(&self) -> u32 {
+        root_id_of(&self.nid)
     }
 
     pub fn calc_next_v(&self) -> Velocity {
@@ -72,7 +116,7 @@ impl NodeManager {
         msg
     }
 
-    pub fn generate_node_desc(&self) -> NodeDesc {
+    pub fn get_swarm_size(&self) -> (u32, u32) {
         let mut subswarm_size: u32 = 1;
         for nd in &self.children {
             subswarm_size += nd.desc.subswm;
@@ -81,6 +125,11 @@ impl NodeManager {
             None => subswarm_size,
             Some(nd) => nd.desc.swm,
         };
+        (swarm_size, subswarm_size)
+    }
+
+    pub fn generate_node_desc(&self) -> NodeDesc {
+        let (swarm_size, subswarm_size) = self.get_swarm_size();
         NodeDesc {
             nid: self.nid.clone(),
             cids: self.children.iter().map(|nd| id_of(&nd.desc.nid)).collect(),
