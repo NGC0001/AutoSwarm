@@ -1,5 +1,8 @@
 ## Tasks
 
+- [] tree merging algorithms
+- [] modification of node joining
+
 - [] split background into different parts and set up writing plan
 - [] problem definition
 - [] previous example PGT thesis
