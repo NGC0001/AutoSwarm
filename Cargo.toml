@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "astro",
+    "quantity",
+]
+resolver = "2"

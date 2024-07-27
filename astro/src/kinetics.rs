@@ -4,8 +4,9 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use quantity::VectorF32;
+
 use super::transceiver::Transceiver;
-use super::util::norm3d;
 
 pub const CHANNEL: &str = "KNTC";
 
@@ -26,7 +27,7 @@ impl Position {
     }
 }
 
-#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+#[derive(VectorF32, Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct Velocity {  // m/s
     pub vx: f32,
     pub vy: f32,
@@ -41,23 +42,14 @@ impl Velocity {
             vz: 0.0,
         }
     }
-
-    pub fn norm(&self) -> f32 {
-        norm3d(self.vx, self.vy, self.vz)
-    }
 }
 
+#[derive(VectorF32)]
 #[derive(Copy, Clone)]
 pub struct Displacement {  // m
     pub x: f32,
     pub y: f32,
     pub z: f32,
-}
-
-impl Displacement {
-    pub fn norm(&self) -> f32 {
-        norm3d(self.x, self.y, self.z)
-    }
 }
 
 impl ops::Mul<Duration> for &Velocity {

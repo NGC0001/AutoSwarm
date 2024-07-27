@@ -86,18 +86,18 @@ impl NodeManager {
             None => Velocity::zero(),
             Some(pn) => {
                 // TODO: this is a bad algorithm.
-                // need to take parent velocity into account.
                 let s = &pn.desc.p - &self.p;
                 let dist: f32 = s.norm();
                 if dist < self.conf.msg_range / 3.0 {
                     Velocity::zero()
                 } else {
                     let factor: f32 = (self.conf.max_v / 2.0) / dist;
+                    // TODO: take parent velocity into account
                     Velocity {
                         vx: s.x * factor,
                         vy: s.y * factor,
                         vz: s.z * factor,
-                    }
+                    } + 1.0 * &pn.desc.v - &pn.desc.v * 1.0
                 }
             },
         }
