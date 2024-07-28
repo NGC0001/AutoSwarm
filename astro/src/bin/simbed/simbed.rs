@@ -1,7 +1,7 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use astro::kinetics::Position;
+use astro::kinetics::PosVec;
 
 use super::uavconf::{self, UavConf};
 use super::uavsim::{UavSim, MsgPack};
@@ -22,7 +22,7 @@ impl SimBed {
     pub fn new(num_uav: u32, astro_bin: &String) -> SimBed {
         let mut uavs: Vec<Uav> = vec![];
         for id in 0..num_uav {
-            let init_p = Position {
+            let init_p = PosVec {
                 x: 0.0 + (id as f32) * uavconf::DEFAULT_MSG_OUT_DISTANCE / 1.8,
                 y: 0.0,
                 z: 0.0,

@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use super::super::astroconf::AstroConf;
-use super::super::kinetics::{Position, Velocity};
+use super::super::kinetics::{PosVec, Velocity};
 use super::msg::{Nid, id_of, root_id_of, parent_id_of, valid_descendant_of};
 use super::msg::{NodeDesc, MsgBody, Msg};
 
@@ -21,12 +21,12 @@ pub struct NodeManager {
     parent: Option<Node>,  // need backup ids (indirect upper nodes / sibling nodes)
     children: Vec<Node>,
     node_lost_duration: Duration,
-    p: Position,
+    p: PosVec,
     v: Velocity,
 }
 
 impl NodeManager {
-    pub fn new_root_node(conf: &Rc<AstroConf>, p: &Position, v: &Velocity) -> NodeManager {
+    pub fn new_root_node(conf: &Rc<AstroConf>, p: &PosVec, v: &Velocity) -> NodeManager {
         NodeManager {
             conf: conf.clone(),
             nid: vec![conf.id],
@@ -140,7 +140,7 @@ impl NodeManager {
         }
     }
 
-    pub fn update_node(&mut self, p: &Position, v: &Velocity, rm: &Vec<u32>, msgs: &Vec<&Msg>) {
+    pub fn update_node(&mut self, p: &PosVec, v: &Velocity, rm: &Vec<u32>, msgs: &Vec<&Msg>) {
         self.p = *p;
         self.v = *v;
         self.remove_no_connection_nodes(rm);

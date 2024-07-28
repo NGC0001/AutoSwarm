@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::astroconf::AstroConf;
-use super::kinetics::{Position, Velocity};
+use super::kinetics::{PosVec, Velocity};
 
 mod conn;
 mod msg;
@@ -20,7 +20,7 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn new(conf: &Rc<AstroConf>, p: &Position, v: &Velocity) -> Control {
+    pub fn new(conf: &Rc<AstroConf>, p: &PosVec, v: &Velocity) -> Control {
         Control {
             conf: conf.clone(),
             conn: Connection::new(p, conf.msg_range),
@@ -28,7 +28,7 @@ impl Control {
         }
     }
 
-    pub fn update(&mut self, p: &Position, v: &Velocity, msgs_in: &Vec<Msg>)
+    pub fn update(&mut self, p: &PosVec, v: &Velocity, msgs_in: &Vec<Msg>)
     -> (Velocity, Vec<Msg>) {
         let (_, rm) = self.conn.update(p, msgs_in);
         let msgs_in_range = self.conn.pick_messages_in_range(msgs_in);

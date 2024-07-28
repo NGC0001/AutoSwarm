@@ -2,7 +2,7 @@ use std::option::Option;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Position, Velocity};
+use super::{PosVec, Velocity};
 
 // the node id of a uav in a tree structure.
 // it is: id(top) -> id -> ... -> id(this)
@@ -37,7 +37,7 @@ pub fn parent_id_of(nid: &Nid) -> Option<u32> {
 pub struct NodeDesc {
     pub nid: Nid,  // structural id of node, down-flowing data
     pub cids: Vec<u32>,  // ids of child nodes
-    pub p: Position,
+    pub p: PosVec,
     pub v: Velocity,
     pub subswm: u32,  // the size of the subswarm, up-flowing data
     pub swm: u32,  // the size of the swarm, down-flowing data

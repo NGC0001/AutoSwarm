@@ -10,21 +10,11 @@ use super::transceiver::Transceiver;
 
 pub const CHANNEL: &str = "KNTC";
 
-#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
-pub struct Position {  // m
+#[derive(VectorF32, Copy, Clone, Deserialize, Serialize, Debug)]
+pub struct PosVec {  // m
     pub x: f32,
     pub y: f32,
     pub z: f32,
-}
-
-impl Position {
-    pub fn zero() -> Position {
-        Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
-    }
 }
 
 #[derive(VectorF32, Copy, Clone, Deserialize, Serialize, Debug)]
@@ -34,30 +24,12 @@ pub struct Velocity {  // m/s
     pub vz: f32,
 }
 
-impl Velocity {
-    pub fn zero() -> Velocity {
-        Velocity {
-            vx: 0.0,
-            vy: 0.0,
-            vz: 0.0,
-        }
-    }
-}
-
-#[derive(VectorF32)]
-#[derive(Copy, Clone)]
-pub struct Displacement {  // m
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
 impl ops::Mul<Duration> for &Velocity {
-    type Output = Displacement;
+    type Output = PosVec;
 
     fn mul(self, dt: Duration) -> Self::Output {
         let dt_s: f32 = dt.as_secs_f32();
-        Displacement {
+        PosVec {
             x: self.vx * dt_s,
             y: self.vy * dt_s,
             z: self.vz * dt_s,
@@ -66,100 +38,14 @@ impl ops::Mul<Duration> for &Velocity {
 }
 
 impl ops::Mul<Duration> for Velocity {
-    type Output = Displacement;
+    type Output = PosVec;
 
     fn mul(self, dt: Duration) -> Self::Output {
         &self * dt
     }
 }
 
-impl ops::Sub<&Position> for &Position {
-    type Output = Displacement;
-
-    fn sub(self, ref_p: &Position) -> Self::Output {
-        Displacement {
-            x: self.x - ref_p.x,
-            y: self.y - ref_p.y,
-            z: self.z - ref_p.z,
-        }
-    }
-}
-
-impl ops::Sub<&Position> for Position {
-    type Output = Displacement;
-
-    fn sub(self, ref_p: &Position) -> Self::Output {
-        &self - ref_p
-    }
-}
-
-impl ops::Sub<Position> for &Position {
-    type Output = Displacement;
-
-    fn sub(self, ref_p: Position) -> Self::Output {
-        self - &ref_p
-    }
-}
-
-impl ops::Sub<Position> for Position {
-    type Output = Displacement;
-
-    fn sub(self, ref_p: Position) -> Self::Output {
-        &self - &ref_p
-    }
-}
-
-impl ops::Add<&Displacement> for &Position {
-    type Output = Position;
-
-    fn add(self, d: &Displacement) -> Self::Output {
-        Position {
-            x: self.x + d.x,
-            y: self.y + d.y,
-            z: self.z + d.z,
-        }
-    }
-}
-
-impl ops::Add<Displacement> for &Position {
-    type Output = Position;
-
-    fn add(self, d: Displacement) -> Self::Output {
-        self + &d
-    }
-}
-
-impl ops::Add<&Displacement> for Position {
-    type Output = Position;
-
-    fn add(self, d: &Displacement) -> Self::Output {
-        &self + d
-    }
-}
-
-impl ops::Add<Displacement> for Position {
-    type Output = Position;
-
-    fn add(self, d: Displacement) -> Self::Output {
-        &self + &d
-    }
-}
-
-impl ops::AddAssign<&Displacement> for Position {
-    fn add_assign(&mut self, d: &Displacement) {
-        self.x += d.x;
-        self.y += d.y;
-        self.z += d.z;
-    }
-}
-
-impl ops::AddAssign<Displacement> for Position {
-    fn add_assign(&mut self, d: Displacement) {
-        *self += &d;
-    }
-}
-
-pub fn distance(p1: &Position, p2: &Position) -> f32 {
+pub fn distance(p1: &PosVec, p2: &PosVec) -> f32 {
     (p1 - p2).norm()
 }
 

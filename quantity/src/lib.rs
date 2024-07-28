@@ -21,6 +21,14 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
 
     quote! {
         impl #struct_name {
+            pub fn zero() -> #struct_name {
+                #struct_name {
+                    #(
+                        #idents: 0.0,
+                    )*
+                }
+            }
+
             #[inline]
             pub fn norm_square(&self) -> f32 {
                 #(
@@ -31,6 +39,19 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
             #[inline]
             pub fn norm(&self) -> f32 {
                 self.norm_square().sqrt()
+            }
+        }
+
+        impl ::std::ops::AddAssign<& #struct_name> for #struct_name {
+            fn add_assign(&mut self, other: & #struct_name) {
+                #(
+                    self.#idents += other.#idents;
+                )*
+            }
+        }
+        impl ::std::ops::AddAssign<#struct_name> for #struct_name {
+            fn add_assign(&mut self, other: #struct_name) {
+                *self += &other;
             }
         }
 
@@ -63,6 +84,19 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
             }
         }
 
+        impl ::std::ops::SubAssign<& #struct_name> for #struct_name {
+            fn sub_assign(&mut self, other: & #struct_name) {
+                #(
+                    self.#idents -= other.#idents;
+                )*
+            }
+        }
+        impl ::std::ops::SubAssign<#struct_name> for #struct_name {
+            fn sub_assign(&mut self, other: #struct_name) {
+                *self -= &other;
+            }
+        }
+
         impl ::std::ops::Sub<& #struct_name> for & #struct_name {
             type Output = #struct_name;
             fn sub(self, other: & #struct_name) -> Self::Output {
@@ -92,6 +126,14 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
             }
         }
 
+        impl ::std::ops::MulAssign<f32> for #struct_name {
+            fn mul_assign(&mut self, multiplier: f32) {
+                #(
+                    self.#idents *= multiplier;
+                )*
+            }
+        }
+
         impl ::std::ops::Mul<f32> for & #struct_name {
             type Output = #struct_name;
             fn mul(self, multiplier: f32) -> Self::Output {
@@ -118,6 +160,14 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
             type Output = #struct_name;
             fn mul(self, value: #struct_name) -> Self::Output {
                 &value * self
+            }
+        }
+
+        impl ::std::ops::DivAssign<f32> for #struct_name {
+            fn div_assign(&mut self, divisor: f32) {
+                #(
+                    self.#idents /= divisor;
+                )*
             }
         }
 

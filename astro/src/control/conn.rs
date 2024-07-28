@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::ops::Fn;
 
-use super::super::kinetics::{Position, distance};
+use super::super::kinetics::{PosVec, distance};
 use super::msg::{id_of, Msg, Nid, NodeDesc};
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
@@ -30,7 +30,7 @@ impl Target {
 
 // manage the connections with neighbour uavs.
 pub struct Connection {
-    p_self: Position,
+    p_self: PosVec,
     targets_in_range: HashMap<u32, Target>,
     msg_range: f32,
     in_range_threshold: f32,
@@ -39,7 +39,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(p: &Position, msg_range: f32) -> Connection {
+    pub fn new(p: &PosVec, msg_range: f32) -> Connection {
         Connection {
             p_self: *p,
             targets_in_range: HashMap::new(),
@@ -64,7 +64,7 @@ impl Connection {
 
     // messages should be ordered by arrival time.
     // returned `add` and `rm` should not overlap.
-    pub fn update<'a>(&mut self, p_self: &Position, msgs_in: &'a Vec<Msg>)
+    pub fn update<'a>(&mut self, p_self: &PosVec, msgs_in: &'a Vec<Msg>)
     -> (Vec<&'a Nid>, Vec<u32>) {
         self.p_self = *p_self;
         // m_map stores the newest message (with fresh position and sid) from a uav

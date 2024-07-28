@@ -3,7 +3,7 @@ use std::os::unix::net::UnixStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::kinetics::{Position, Velocity};
+use crate::kinetics::{PosVec, Velocity};
 
 use super::astroconf::AstroConf;
 use super::comm::Comm;
@@ -29,7 +29,7 @@ impl Astro {
         let socket_file: String = util::get_socket_name(conf.id);
         let stream = UnixStream::connect(socket_file).unwrap();
         let transceiver = Rc::new(RefCell::new(Transceiver::new(stream)));
-        let p_dummy = Position::zero();
+        let p_dummy = PosVec::zero();
         let v_dummy = Velocity::zero();
         Astro {
             gps: Gps::new(&transceiver, &p_dummy),

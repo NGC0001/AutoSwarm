@@ -4,7 +4,7 @@ use std::time::Instant;
 use std::rc::Rc;
 
 use astro::comm;
-use astro::kinetics::{self, Position, Velocity, KntcMsg, distance};
+use astro::kinetics::{self, PosVec, Velocity, KntcMsg, distance};
 use astro::gps::{self, GpsMsg};
 use astro::transceiver::Transceiver;
 
@@ -12,7 +12,7 @@ use super::uavconf::UavConf;
 
 pub struct MsgPack {
     id: u32,
-    p: Position,
+    p: PosVec,
     msg_out_distance: f32,
     data_vec: Vec<String>,
 }
@@ -22,7 +22,7 @@ impl MsgPack {
         self.id
     }
 
-    pub fn get_source_p(&self) -> &Position {
+    pub fn get_source_p(&self) -> &PosVec {
         &self.p
     }
 }
@@ -30,7 +30,7 @@ impl MsgPack {
 // provides simulation support for a running UAV.
 pub struct UavSim {
     conf: Rc<UavConf>,
-    p: Position,
+    p: PosVec,
     p_calc_t: Instant,
     p_send_t: Instant,
     v: Velocity,
@@ -102,7 +102,7 @@ impl UavSim {
         }
     }
 
-    pub fn overlap_with_uav_at(&self, other_p: &Position) -> bool {  // assuming same radius
+    pub fn overlap_with_uav_at(&self, other_p: &PosVec) -> bool {  // assuming same radius
         distance(&self.p, other_p) <= 2.0 * self.conf.radius
     }
 }
