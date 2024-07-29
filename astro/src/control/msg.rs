@@ -1,4 +1,4 @@
-use std::option::Option;
+use std::{option::Option, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +16,11 @@ pub fn id_of(nid: &Nid) -> u32 {
 #[inline]
 pub fn root_id_of(nid: &Nid) -> u32 {
     *nid.first().unwrap()
+}
+
+#[inline]
+pub fn is_root_node(nid: &Nid) -> bool {
+    nid.len() == 1
 }
 
 #[inline]
@@ -44,10 +49,23 @@ pub struct NodeDesc {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct Line {
+    points: Vec<PosVec>,
+    closed: bool,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Task {
+    line: Line,
+    duration: Duration,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub enum MsgBody {
     KEEPALIVE,
     JOIN,
     LEAVE,
+    TASK(Task),
 }
 
 #[derive(Deserialize, Serialize, Debug)]

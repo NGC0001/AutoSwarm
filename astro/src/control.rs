@@ -44,7 +44,7 @@ impl Control {
             msgs_out.push(msg);
         }
 
-        println!("{:?}", self.nm.get_nid());
+        // println!("{:?}", self.nm.get_nid());
 
         let next_v = self.nm.calc_next_v();
         (next_v, msgs_out)

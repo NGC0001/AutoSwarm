@@ -1,14 +1,17 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
+use rand::{thread_rng, seq::SliceRandom};
+
 use astro::kinetics::PosVec;
 
-use super::uavconf::{self, UavConf};
+use super::uavconf::UavConf;
 use super::uavsim::{UavSim, MsgPack};
 use super::uav::Uav;
 
 pub const SIM_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
 pub const SIM_LOOP_INTERVAL: Duration = Duration::from_millis(50);
+pub const UAV_INIT_POS_INTERVAL: f32 = 5.0;  // m
 
 // provide simulation support for a UAV swarm including:
 // a) kinetic integration for each UAV
@@ -20,14 +23,21 @@ pub struct SimBed {
 
 impl SimBed {
     pub fn new(num_uav: u32, astro_bin: &String) -> SimBed {
+        let mut init_p_vec: Vec<PosVec> = vec![];
+        let row_len = (num_uav as f64).sqrt().ceil() as u32;
+        for id in 0..num_uav {
+            let row: u32 = id / row_len;
+            let col: u32 = id % row_len;
+            init_p_vec.push(PosVec {
+                x: UAV_INIT_POS_INTERVAL * (col as f32),
+                y: UAV_INIT_POS_INTERVAL * (row as f32),
+                z: 0.0,
+            });
+        }
+        init_p_vec.shuffle(&mut thread_rng());
         let mut uavs: Vec<Uav> = vec![];
         for id in 0..num_uav {
-            let init_p = PosVec {
-                x: 0.0 + (id as f32) * uavconf::DEFAULT_MSG_OUT_DISTANCE / 1.8,
-                y: 0.0,
-                z: 0.0,
-            };
-            let conf = UavConf::new(id, init_p);
+            let conf = UavConf::new(id, init_p_vec[id as usize]);
             uavs.push(Uav::new(conf, astro_bin));
         }
         SimBed {
@@ -39,6 +49,10 @@ impl SimBed {
         loop {
             let start = Instant::now();
             self.sim_step();
+            if self.uavs.iter().all(|uav| uav.is_shutdown()) {
+                // all uavs have been shutdown
+                break;
+            }
             let end = Instant::now();
             if end - start < SIM_LOOP_INTERVAL_MIN {
                 let sleep_duration = SIM_LOOP_INTERVAL - (end - start);

@@ -7,7 +7,7 @@ use rand::Rng;
 
 use super::super::astroconf::AstroConf;
 use super::super::kinetics::{PosVec, Velocity};
-use super::msg::{Nid, id_of, root_id_of, parent_id_of, valid_descendant_of};
+use super::msg::{Nid, id_of, root_id_of, is_root_node, parent_id_of, valid_descendant_of};
 use super::msg::{NodeDesc, MsgBody, Msg};
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
@@ -41,7 +41,7 @@ impl NodeManager {
     }
 
     pub fn is_root_node(&self) -> bool {
-        self.nid.len() == 1
+        is_root_node(&self.nid)
     }
 
     // TODO: this is a bad algorithm.
@@ -75,16 +75,13 @@ impl NodeManager {
                         last_heard: Instant::now(),
                     });
                     let id = id_of(&self.nid);
+                    println!("{} -> {}", id_of(&desc.nid), id);
                     self.nid = desc.nid.clone();
                     self.nid.push(id);
                     Some(msg)
                 }
             },
         }
-    }
-
-    pub fn get_nid(&self) -> &Nid {
-        &self.nid
     }
 
     pub fn get_root_id(&self) -> u32 {
@@ -181,6 +178,7 @@ impl NodeManager {
             MsgBody::KEEPALIVE => (),
             MsgBody::JOIN => self.add_child(now, desc_sdr),
             MsgBody::LEAVE => self.remove_child(id_of(&desc_sdr.nid)),
+            MsgBody::TASK(..) => (),
         }
     }
 
