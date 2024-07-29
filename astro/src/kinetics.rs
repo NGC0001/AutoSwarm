@@ -10,6 +10,7 @@ use super::transceiver::Transceiver;
 
 pub const CHANNEL: &str = "KNTC";
 
+// the position vector (i.e., displacement)
 #[derive(VectorF32, Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct PosVec {  // m
     pub x: f32,

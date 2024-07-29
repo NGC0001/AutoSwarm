@@ -1,24 +1,22 @@
 ## Tasks
 
 - [] tree merging algorithms
-- [] modification of node joining
+
+- [] Do the task only if swarm size > 1/2 known total uav number, this number needs to be saved
+- [] Record status of each received task
+
+- [] add another "better" tree-merging algorithm
+- [] possibly: no node-detaching (stable tree); fly toward the max known swarm; switch parent<->child
 
 - [] split background into different parts and set up writing plan
 - [] problem definition
 - [] previous example PGT thesis
-
 - [] abstract with keywords
 
 ## Further Readings
 
 - [Rust Robotics](https://robotics.rs)
 - [Open Rust Robotics](https://github.com/openrr)
-
-## Further Readings
-
-- A star
-- D star
-- Rapidly-Exploring Random Tree
 
 ## Website References
 

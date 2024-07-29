@@ -3,6 +3,8 @@ use std::option::Option;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use rand::Rng;
+
 use super::super::astroconf::AstroConf;
 use super::super::kinetics::{PosVec, Velocity};
 use super::msg::{Nid, id_of, root_id_of, parent_id_of, valid_descendant_of};
@@ -38,6 +40,11 @@ impl NodeManager {
         }
     }
 
+    pub fn is_root_node(&self) -> bool {
+        self.nid.len() == 1
+    }
+
+    // TODO: this is a bad algorithm.
     pub fn join_other_tree(&mut self, candidates: &mut Vec<&NodeDesc>) -> Option<Msg> {
         candidates.sort_unstable_by(|desc1, desc2| {
             let swm_cmp = desc1.swm.cmp(&desc2.swm);
@@ -50,9 +57,12 @@ impl NodeManager {
             None => None,
             Some(desc) => {
                 let (swarm_size, _) = self.get_swarm_size();
+                let mut rng = rand::thread_rng();
                 if desc.swm < swarm_size {
                     None
                 } else if desc.swm == swarm_size && self.get_root_id() <= root_id_of(&desc.nid) {
+                    None
+                } else if !self.is_root_node() && rng.gen_range(0..10) < 5 {  // TODO: try to avoid random number
                     None
                 } else {
                     // TODO: wait for swarm_size to update
@@ -97,7 +107,7 @@ impl NodeManager {
                         vx: s.x * factor,
                         vy: s.y * factor,
                         vz: s.z * factor,
-                    } + 1.0 * &pn.desc.v - &pn.desc.v * 1.0
+                    }
                 }
             },
         }
@@ -168,9 +178,9 @@ impl NodeManager {
         let desc_sdr = &msg.sender;
         self.update_desc(now, desc_sdr);
         match msg.body {
+            MsgBody::KEEPALIVE => (),
             MsgBody::JOIN => self.add_child(now, desc_sdr),
             MsgBody::LEAVE => self.remove_child(id_of(&desc_sdr.nid)),
-            MsgBody::KEEPALIVE => (),
         }
     }
 
