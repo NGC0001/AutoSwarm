@@ -10,6 +10,8 @@ use super::transceiver::Transceiver;
 
 pub const CHANNEL: &str = "KNTC";
 
+// TODO: time is represented by capsulated type Duration, but distance is by f32
+
 // the position vector (i.e., displacement)
 #[derive(VectorF32, Copy, Clone, Deserialize, Serialize, Debug)]
 pub struct PosVec {  // m
@@ -46,6 +48,27 @@ impl ops::Mul<Duration> for Velocity {
     }
 }
 
+impl ops::Div<Duration> for &PosVec {
+    type Output = Velocity;
+
+    fn div(self, dt: Duration) -> Self::Output {
+        let dt_s: f32 = dt.as_secs_f32();
+        Velocity {
+            vx: self.x / dt_s,
+            vy: self.y / dt_s,
+            vz: self.z / dt_s,
+        }
+    }
+}
+
+impl ops::Div<Duration> for PosVec {
+    type Output = Velocity;
+
+    fn div(self, dt: Duration) -> Self::Output {
+        &self / dt
+    }
+}
+
 pub fn distance(p1: &PosVec, p2: &PosVec) -> f32 {
     (p1 - p2).norm()
 }
@@ -76,12 +99,12 @@ impl Kinetics {
 
     pub fn set_v(&mut self, v: &Velocity) {
         let v_norm = v.norm();
-        if v_norm <= self.max_v {
-            self.v = *v;
+        self.v = if v_norm <= self.max_v {
+            *v
         } else {
             // ensure that the velocity doesn't exceed limit.
-            self.v = v * (self.max_v / v_norm);
-        }
+            v * (self.max_v / v_norm)
+        };
         self.send_kntc_msg();
     }
 

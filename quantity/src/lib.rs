@@ -20,6 +20,8 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
     }
 
     quote! {
+        // floating-point overflow/underflow is not considered here
+
         impl #struct_name {
             pub fn zero() -> #struct_name {
                 #struct_name {
@@ -39,6 +41,15 @@ pub fn __derive_impl_vector_f32(item: TokenStream) -> TokenStream {
             #[inline]
             pub fn norm(&self) -> f32 {
                 self.norm_square().sqrt()
+            }
+
+            pub fn unit(&self) -> ::std::option::Option<#struct_name> {
+                let norm = self.norm();
+                if norm <= 0.0 {
+                    None
+                } else {
+                    Some(self / norm)
+                }
             }
         }
 

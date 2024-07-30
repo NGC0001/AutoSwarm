@@ -45,8 +45,12 @@ impl NodeManager {
     }
 
     // TODO: this is a bad algorithm, and too long a function.
-    pub fn join_other_tree(&mut self, candidates: &mut Vec<&NodeDesc>) -> Option<Msg> {
+    fn join_other_tree(&mut self, neighbours: &Vec<&NodeDesc>) -> Option<Msg> {
+        // TODO: freshness of the nodes when get nearby targets?
         // TODO: the number of children also needs considered
+        let root_self = self.get_root_id();
+        let mut candidates: Vec<&NodeDesc> = neighbours.iter().map(|r| *r).filter(
+            |desc| root_id_of(&desc.nid) != root_self).collect();
         candidates.sort_unstable_by(|desc1, desc2| {
             let swm_cmp = desc1.swm.cmp(&desc2.swm);
             match swm_cmp {
@@ -148,7 +152,9 @@ impl NodeManager {
         }
     }
 
-    pub fn update_node(&mut self, p: &PosVec, v: &Velocity, rm: &Vec<u32>, msgs: &Vec<&Msg>) {
+    pub fn update_node(&mut self, p: &PosVec, v: &Velocity,
+                       rm: &Vec<u32>, msgs: &Vec<&Msg>, neighbours: &Vec<&NodeDesc>)
+    -> (Velocity, Vec<Msg>) {
         self.p = *p;
         self.v = *v;
         self.remove_no_connection_nodes(rm);
@@ -156,7 +162,15 @@ impl NodeManager {
         for msg in msgs {
             self.process_msg(now, msg);
         }
-        self.remove_lost_nodes(now);
+        self.remove_no_msg_nodes(now);
+
+        let mut msgs_out: Vec<Msg> = vec![];
+        msgs_out.push(self.generate_desc_msg());
+        if let Some(msg) = self.join_other_tree(neighbours) {
+            msgs_out.push(msg);
+        }
+
+        (self.calc_next_v(), msgs_out)
     }
 
     fn remove_no_connection_nodes(&mut self, rm: &Vec<u32>) {
@@ -252,7 +266,7 @@ impl NodeManager {
         }
     }
 
-    fn remove_lost_nodes(&mut self, now: Instant) {
+    fn remove_no_msg_nodes(&mut self, now: Instant) {
         if let Some(nd) = &self.parent {
             if now - nd.last_heard > self.node_lost_duration {
                 self.remove_parent();

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use std::ops::Fn;
 
 use super::super::kinetics::{PosVec, distance};
 use super::msg::{id_of, Msg, Nid, NodeDesc};
@@ -50,22 +49,10 @@ impl Connection {
         }
     }
 
-    pub fn get_targets<F>(&self, filter: F) -> Vec<&NodeDesc>
-    where F: Fn(&NodeDesc) -> bool {
-        let mut targets: Vec<&NodeDesc> = vec![];
-        for (_, t) in &self.targets_in_range {
-            let desc: &NodeDesc = &t.desc;
-            if filter(desc) {
-                targets.push(&t.desc);
-            }
-        }
-        targets
-    }
-
-    // messages should be ordered by arrival time.
+    // messages in `msgs_in`` should order by arrival time.
     // returned `add` and `rm` should not overlap.
     pub fn update<'a>(&mut self, p_self: &PosVec, msgs_in: &'a Vec<Msg>)
-    -> (Vec<&'a Nid>, Vec<u32>) {
+    -> (Vec<&NodeDesc>, Vec<&'a Nid>, Vec<u32>, Vec<&'a Msg>) {
         self.p_self = *p_self;
         // m_map stores the newest message (with fresh position and sid) from a uav
         let mut m_map: HashMap<u32, &'a Msg> = HashMap::new();
@@ -77,9 +64,13 @@ impl Connection {
         }
         let now = Instant::now();
         let (add, mut rm) = self.update_by_msg_positions(now, &m_map);
-        self.filter_out_lost_targets(now);
         rm.append(&mut self.filter_out_lost_targets(now));  // should contain no duplicate ids
-        (add, rm)
+        let msgs = self.pick_messages_in_range(msgs_in);
+        (self.get_neighbours(), add, rm, msgs)
+    }
+
+    pub fn get_neighbours(&self) -> Vec<&NodeDesc> {
+        self.targets_in_range.iter().map(|(_, t)| &t.desc).collect()
     }
 
     // this algorithm does not ensure symmetry.
@@ -127,7 +118,7 @@ impl Connection {
         rm
     }
 
-    pub fn pick_messages_in_range<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
+    fn pick_messages_in_range<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
         let mut msg_in_range: Vec<&Msg> = vec![];
         for msg in msgs {
             let from_id: u32 = id_of(&msg.sender.nid);
