@@ -33,7 +33,7 @@ impl Astro {
         let v_dummy = Velocity::zero();
         Astro {
             gps: Gps::new(&transceiver, &p_dummy),
-            kntc: Kinetics::new(&transceiver, &v_dummy),
+            kntc: Kinetics::new(conf.max_v, &transceiver, &v_dummy),
             comm: Comm::new(&transceiver),
             ctrl: Control::new(&conf, &p_dummy, &v_dummy),
         }

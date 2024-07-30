@@ -58,13 +58,15 @@ pub struct KntcMsg {
 pub struct Kinetics {
     v: Velocity,
     tc: Rc<RefCell<Transceiver>>,
+    max_v: f32,
 }
 
 impl Kinetics {
-    pub fn new(tc: &Rc<RefCell<Transceiver>>, v_init: &Velocity) -> Kinetics {
+    pub fn new(max_v: f32, tc: &Rc<RefCell<Transceiver>>, v_init: &Velocity) -> Kinetics {
         Kinetics {
             v: *v_init,
             tc: tc.clone(),
+            max_v,
         }
     }
 
@@ -73,7 +75,13 @@ impl Kinetics {
     }
 
     pub fn set_v(&mut self, v: &Velocity) {
-        self.v = *v;
+        let v_norm = v.norm();
+        if v_norm <= self.max_v {
+            self.v = *v;
+        } else {
+            // ensure that the velocity doesn't exceed limit.
+            self.v = v * (self.max_v / v_norm);
+        }
         self.send_kntc_msg();
     }
 

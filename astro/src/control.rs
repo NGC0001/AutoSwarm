@@ -39,6 +39,7 @@ impl Control {
         msgs_out.push(self.nm.generate_desc_msg());
 
         let root_self = self.nm.get_root_id();
+        // TODO: freshness of the nodes when get nearby targets?
         let mut nodes_on_other_trees = self.conn.get_targets(|desc| root_id_of(&desc.nid) != root_self);
         if let Some(msg) = self.nm.join_other_tree(&mut nodes_on_other_trees) {
             msgs_out.push(msg);

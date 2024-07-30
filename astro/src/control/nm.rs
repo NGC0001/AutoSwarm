@@ -44,8 +44,9 @@ impl NodeManager {
         is_root_node(&self.nid)
     }
 
-    // TODO: this is a bad algorithm.
+    // TODO: this is a bad algorithm, and too long a function.
     pub fn join_other_tree(&mut self, candidates: &mut Vec<&NodeDesc>) -> Option<Msg> {
+        // TODO: the number of children also needs considered
         candidates.sort_unstable_by(|desc1, desc2| {
             let swm_cmp = desc1.swm.cmp(&desc2.swm);
             match swm_cmp {
