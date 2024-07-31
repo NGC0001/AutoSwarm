@@ -27,8 +27,8 @@ impl Target {
     }
 }
 
-// manage the connections with neighbour uavs.
-pub struct Connection {
+// manage the contact with neighbour uavs.
+pub struct Contacts {
     p_self: PosVec,
     targets_in_range: HashMap<u32, Target>,
     msg_range: f32,
@@ -37,9 +37,9 @@ pub struct Connection {
     lost_duration: Duration,
 }
 
-impl Connection {
-    pub fn new(p: &PosVec, msg_range: f32) -> Connection {
-        Connection {
+impl Contacts {
+    pub fn new(p: &PosVec, msg_range: f32) -> Contacts {
+        Contacts {
             p_self: *p,
             targets_in_range: HashMap::new(),
             msg_range,
@@ -74,7 +74,7 @@ impl Connection {
     }
 
     // this algorithm does not ensure symmetry.
-    // "a in connection with b" does not ensure "b in connection with a".
+    // "a in contact with b" does not ensure "b in contact with a".
     fn update_by_msg_positions<'a>(&mut self, msg_time: Instant, m_map: &HashMap<u32, &'a Msg>)
     -> (Vec<&'a Nid>, Vec<u32>) {
         let mut add: Vec<&'a Nid> = vec![];

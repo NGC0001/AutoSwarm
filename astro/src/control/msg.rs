@@ -41,29 +41,34 @@ pub fn parent_id_of(nid: &Nid) -> Option<u32> {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct NodeDesc {
     pub nid: Nid,  // structural id of node, down-flowing data
-    pub cids: Vec<u32>,  // ids of child nodes
     pub p: PosVec,
     pub v: Velocity,
-    pub subswm: u32,  // the size of the subswarm, up-flowing data
     pub swm: u32,  // the size of the swarm, down-flowing data
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct NodeDetails {
+    pub subswarm: u32,  // the size of the subswarm, up-flowing data
+    pub free: bool,  // whether the node is in free state, down-flowing data
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Line {
-    points: Vec<PosVec>,
-    closed: bool,
+    pub points: Vec<PosVec>,
+    pub closed: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Task {
-    line: Line,
-    duration: Duration,
+    pub line: Line,
+    pub duration: Duration,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum MsgBody {
-    KEEPALIVE,
-    JOIN,
+    BROADCASTING,  // report basic status to all neighbours, no specific target
+    CONNECTION(NodeDetails),  // repport status to parent and children
+    JOIN(NodeDetails),
     LEAVE,
     TASK(Task),
 }
@@ -72,16 +77,5 @@ pub enum MsgBody {
 pub struct Msg {
     pub sender: NodeDesc,  // node description of message sender
     pub to_ids: Vec<u32>,  // target message receivers, None means broadcasting
-
     pub body: MsgBody,
-}
-
-impl Msg {
-    pub fn new(sender: NodeDesc) -> Msg {
-        Msg {
-            sender,
-            to_ids: vec![],
-            body: MsgBody::KEEPALIVE,
-        }
-    }
 }
