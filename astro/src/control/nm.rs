@@ -133,25 +133,25 @@ impl NodeManager {
     -> (Velocity, Vec<Msg>) {
         self.p = *p;
         self.v = *v;
-        self.remove_no_contact_nodes(rm);
-
+        self.remove_no_contact_nodes(rm);  // contact-losing events
         let now = Instant::now();
-        let mut msgs_out: Vec<Msg> = vec![];
-        for msg in msgs {
-            if let Some(mut msgs_to_send) = self.process_msg(now, msg) {
-                msgs_out.append(&mut msgs_to_send);
-            }
+        for msg in msgs {  // message events
+            self.process_msg(now, msg);
         }
-        self.remove_no_connection_nodes(now);
+        self.remove_no_connection_nodes(now);  // connection-losing events
 
-        if let Some(mut msgs_to_send) = self.explore_neighbours(now, neighbours) {
+        // messages may be lost, so generally they should carry state, rather than carry events.
+        // if an event is not received by all parties involved, its (partial) effect should be revocable.
+        let mut msgs_out: Vec<Msg> = vec![];
+        if let Some(mut msgs_to_send) = self.explore_neighbours(now, neighbours) {  // neighbourhood events
             msgs_out.append(&mut msgs_to_send);
         }
-
+        // TODO:
+        // self.manage_state();
+        // msgs_out.append(self.maybe_generate_state_msg());
         if let Some(msg_to_send) = self.maybe_generate_connection_msg(now) {
             msgs_out.push(msg_to_send);
         }
-
         (self.calc_next_v(), msgs_out)
     }
 
@@ -164,14 +164,14 @@ impl NodeManager {
         }
     }
 
-    fn process_msg(&mut self, now: Instant, msg: &Msg) -> Option<Vec<Msg>> {
+    fn process_msg(&mut self, now: Instant, msg: &Msg) {
         let desc_sdr = &msg.sender;
         match &msg.body {
-            MsgBody::BROADCASTING => None,
-            MsgBody::CONNECTION(dtl) => { self.update_connection(desc_sdr, dtl, now); None },
-            MsgBody::JOIN(dtl) => { self.try_add_child(desc_sdr, dtl, now); None },
-            MsgBody::LEAVE => { self.remove_child_with_id(id_of(&desc_sdr.nid)); None },
-            MsgBody::TASK(..) => None,
+            MsgBody::BROADCASTING => (),
+            MsgBody::CONNECTION(dtl) => self.update_connection(desc_sdr, dtl, now),
+            MsgBody::JOIN(dtl) => self.try_add_child(desc_sdr, dtl, now),
+            MsgBody::LEAVE => self.remove_child_with_id(id_of(&desc_sdr.nid)),
+            MsgBody::TASK(..) => (),
         }
     }
 
@@ -189,6 +189,7 @@ impl NodeManager {
         }
     }
 
+    // TODO: check task sucess/failure in this function
     fn explore_neighbours(&mut self, now: Instant, neighbours: &Vec<&NodeDesc>)
     -> Option<Vec<Msg>> {
         match self.state {
@@ -290,17 +291,22 @@ impl NodeManager {
     }
 
     fn update_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails, now: Instant) {
-        if self.has_parent_of_id(id_of(&desc.nid)) {
-            // the description is from recognised parent
-            self.try_update_or_create_parent_connection(desc, dtl, now);
-            // if the other node is not a valid parent, update will not be carried out,
-            // just wait the parent to timeout and be removed.
-        } else {
+        if !self.has_parent_of_id(id_of(&desc.nid)) {
+            // the description may be from a child
             self.update_child_connection(desc, dtl, now);
+        } else {
+            // the description is from recognised parent
+            let id = self.get_id();
+            if valid_descendant_of(id, &desc.nid) {  // valid parent
+                let pnd = self.parent.as_mut().unwrap();
+                pnd.desc = desc.clone();
+                pnd.details = dtl.clone();
+                pnd.last_heard = now;
+                self.on_parent_info_updated();
+            }  // otherwise, just wait the parent to timeout and be removed
         }
     }
 
-    // TODO: modify this function and the add child function, similar to those with parent
     fn update_child_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails, now: Instant) {
         let id = self.get_id();
         let id_other = id_of(&desc.nid);
@@ -340,50 +346,45 @@ impl NodeManager {
     }
 
     fn set_parent(&mut self, desc: &NodeDesc, now: Instant) -> bool {
-        let dtl = NodeDetails {
-            subswarm: 0,
-            free: true,
-        };
-        self.try_update_or_create_parent_connection(desc, &dtl, now)
-    }
-
-    // TODO: split this function, move creation part into set_parent
-    fn try_update_or_create_parent_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails, now: Instant) -> bool {
         let id = self.get_id();
         if !valid_descendant_of(id, &desc.nid) {
-            // the other node is not a valid parent of this node
             false
-        } else {
-            match &mut self.parent {
-                None => {
-                    self.parent = Some(Node {
-                        desc: desc.clone(),
-                        details: dtl.clone(),
-                        last_heard: now,
-                        locked_child: false,
-                    });
-                    println!("new connection: {:?} <- {}", desc.nid, id);
+        } else {  // valid parent
+            self.parent = Some(Node {
+                desc: desc.clone(),
+                details: NodeDetails {
+                    subswarm: 0,
+                    free: true,
                 },
-                Some(pnd) => {
-                    pnd.desc = desc.clone();
-                    pnd.details = dtl.clone();
-                    pnd.last_heard = now;
-                },
-            }
-            self.nid = desc.nid.clone();
-            self.nid.push(id);
-            if dtl.free {
-                self.state = NodeState::Free;
-            }
+                last_heard: now,
+                locked_child: false,
+            });
+            self.on_parent_info_updated();
+            println!("new connection: {:?} <- {}", desc.nid, id);
             true
         }
     }
 
     fn remove_parent(&mut self) {
-        let id = self.get_id();
         self.parent = None;
-        self.nid = vec![id];
-        self.state = NodeState::Free;
+        self.on_parent_info_updated();
+    }
+
+    fn on_parent_info_updated(&mut self) {
+        let id = self.get_id();
+        match &self.parent {
+            None => {
+                self.nid = vec![id];
+                self.state = NodeState::Free;
+            },
+            Some(pnd) => {
+                self.nid = pnd.desc.nid.clone();
+                self.nid.push(id);
+                if pnd.details.free {
+                    self.state = NodeState::Free;
+                }
+            },
+        };
     }
 
     fn remove_child_with_id(&mut self, cid: u32) {
