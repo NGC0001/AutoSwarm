@@ -23,17 +23,17 @@ pub fn is_root_node(nid: &Nid) -> bool {
     nid.len() == 1
 }
 
-#[inline]
-pub fn valid_descendant_of(id: u32, p_nid: &Nid) -> bool {
-    !p_nid.contains(&id)  // non-cyclic
-}
-
 pub fn parent_id_of(nid: &Nid) -> Option<u32> {
     let len = nid.len();
     match len {
         ..=1 => None,
         _ => Some(nid[len - 2]),
     }
+}
+
+#[inline]
+pub fn is_id_valid_descendant_of(id: u32, p_nid: &Nid) -> bool {
+    !p_nid.contains(&id)  // non-cyclic
 }
 
 // description of a node in the tree structure.
@@ -44,12 +44,31 @@ pub struct NodeDesc {
     pub p: PosVec,
     pub v: Velocity,
     pub swm: u32,  // the size of the swarm, down-flowing data
+    pub tsk: bool,  // whether the node has a task, down-flowing data
+}
+
+impl NodeDesc {
+    #[inline]
+    pub fn get_id(&self) -> u32 { id_of(&self.nid) }
+
+    #[inline]
+    pub fn get_root_id(&self) -> u32 { root_id_of(&self.nid) }
+
+    #[inline]
+    pub fn is_root_node(&self) -> bool { is_root_node(&self.nid) }
+
+    #[inline]
+    pub fn get_parent_id(&self) -> Option<u32> { parent_id_of(&self.nid) }
+
+    #[inline]
+    pub fn is_valid_ancestor_of(&self, id: u32) -> bool {
+        is_id_valid_descendant_of(id, &self.nid)
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct NodeDetails {
     pub subswarm: u32,  // the size of the subswarm, up-flowing data
-    pub free: bool,  // whether the node is in free state, down-flowing data
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -66,11 +85,18 @@ pub struct Task {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum MsgBody {
-    BROADCASTING,  // report basic status to all neighbours, no specific target
-    CONNECTION(NodeDetails),  // repport status to parent and children
-    JOIN(NodeDetails),
-    LEAVE,
-    TASK(Task),
+    Broadcasting,  // sender reports basic status to all neighbours, no specific receiver
+    Connection(NodeDetails),  // sender repports status to receiver (parent and children)
+
+    Join(NodeDetails),  // sender wants to set the receiver as its parent
+    Accept,  // sender rejects the receiver as its child
+    Reject,  // sender accepts the receiver as its child
+
+    Leave,  // sender stops recognising the receiver as its parent
+
+    ChangeParent(u32),  // sender sets a third node as the receiver's new parent
+
+    Task(Task),
 }
 
 #[derive(Deserialize, Serialize, Debug)]

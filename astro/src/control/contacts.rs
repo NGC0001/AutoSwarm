@@ -8,14 +8,14 @@ pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
 pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.9;
 pub const DEFAULT_LOST_DURATION: Duration = Duration::from_secs(3);
 
-struct Target {
-    desc: NodeDesc,
-    last_heard: Instant,
+pub struct Contact {
+    pub desc: NodeDesc,
+    pub last_heard: Instant,
 }
 
-impl Target {
-    pub fn from_msg(msg_time: Instant, msg: &Msg) -> Target {
-        Target {
+impl Contact {
+    pub fn from_msg(msg_time: Instant, msg: &Msg) -> Contact {
+        Contact {
             desc: msg.sender.clone(),
             last_heard: msg_time,
         }
@@ -30,7 +30,7 @@ impl Target {
 // manage the contact with neighbour uavs.
 pub struct Contacts {
     p_self: PosVec,
-    targets_in_range: HashMap<u32, Target>,
+    contacts_in_range: HashMap<u32, Contact>,
     msg_range: f32,
     in_range_threshold: f32,
     out_of_range_threshold: f32,
@@ -41,7 +41,7 @@ impl Contacts {
     pub fn new(p: &PosVec, msg_range: f32) -> Contacts {
         Contacts {
             p_self: *p,
-            targets_in_range: HashMap::new(),
+            contacts_in_range: HashMap::new(),
             msg_range,
             in_range_threshold: DEFAULT_IN_RANGE_THRESHOLD,
             out_of_range_threshold: DEFAULT_OUT_OF_RANGE_THRESHOLD,
@@ -52,7 +52,7 @@ impl Contacts {
     // messages in `msgs_in`` should order by arrival time.
     // returned `add` and `rm` should not overlap.
     pub fn update<'a>(&mut self, p_self: &PosVec, msgs_in: &'a Vec<Msg>)
-    -> (Vec<&NodeDesc>, Vec<&'a Nid>, Vec<u32>, Vec<&'a Msg>) {
+    -> (Vec<&Contact>, Vec<&'a Nid>, Vec<u32>, Vec<&'a Msg>) {
         self.p_self = *p_self;
         // m_map stores the newest message (with fresh position and sid) from a uav
         let mut m_map: HashMap<u32, &'a Msg> = HashMap::new();
@@ -64,13 +64,13 @@ impl Contacts {
         }
         let now = Instant::now();
         let (add, mut rm) = self.update_by_msg_positions(now, &m_map);
-        rm.append(&mut self.filter_out_lost_targets(now));  // should contain no duplicate ids
+        rm.append(&mut self.filter_out_lost_contacts(now));  // should contain no duplicate ids
         let msgs = self.pick_messages_in_range(msgs_in);
-        (self.get_neighbours(), add, rm, msgs)
+        (self.get_contacts(), add, rm, msgs)
     }
 
-    pub fn get_neighbours(&self) -> Vec<&NodeDesc> {
-        self.targets_in_range.iter().map(|(_, t)| &t.desc).collect()
+    pub fn get_contacts(&self) -> Vec<&Contact> {
+        self.contacts_in_range.iter().map(|(_, t)| t).collect()
     }
 
     // this algorithm does not ensure symmetry.
@@ -81,39 +81,39 @@ impl Contacts {
         let mut rm: Vec<u32> = vec![];
         for (id_other, msg) in m_map {
             let d = distance(&msg.sender.p, &self.p_self);
-            match self.targets_in_range.get_mut(id_other) {
+            match self.contacts_in_range.get_mut(id_other) {
                 Some(t) => {
                     if d > self.msg_range * self.out_of_range_threshold {
-                        // existing target goes out of range
-                        self.targets_in_range.remove(id_other);
+                        // existing contact goes out of range
+                        self.contacts_in_range.remove(id_other);
                         rm.push(*id_other);
                     } else {
-                        // existing target stays in range
+                        // existing contact stays in range
                         t.update_from_msg(msg_time, msg);
                     }
                 },
                 None => {
                     if d <= self.msg_range * self.in_range_threshold {
-                        // new target goes into range
-                        self.targets_in_range.insert(*id_other, Target::from_msg(msg_time, msg));
+                        // new contact goes into range
+                        self.contacts_in_range.insert(*id_other, Contact::from_msg(msg_time, msg));
                         add.push(&msg.sender.nid);
                     }
-                    // else: new target out of range, irrelative
+                    // else: new contact out of range, irrelative
                 },
             }
         }
         (add, rm)
     }
 
-    fn filter_out_lost_targets(&mut self, now: Instant) -> Vec<u32> {
+    fn filter_out_lost_contacts(&mut self, now: Instant) -> Vec<u32> {
         let mut rm: Vec<u32> = vec![];
-        for (id, t) in &self.targets_in_range {
+        for (id, t) in &self.contacts_in_range {
             if now - t.last_heard > self.lost_duration {
                 rm.push(*id);
             }
         }
         for id in &rm {
-            self.targets_in_range.remove(id);
+            self.contacts_in_range.remove(id);
         }
         rm
     }
@@ -122,7 +122,7 @@ impl Contacts {
         let mut msg_in_range: Vec<&Msg> = vec![];
         for msg in msgs {
             let from_id: u32 = id_of(&msg.sender.nid);
-            match self.targets_in_range.get(&from_id) {
+            match self.contacts_in_range.get(&from_id) {
                 None => (),
                 Some(_) => {
                     msg_in_range.push(msg);

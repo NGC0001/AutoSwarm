@@ -1,17 +1,22 @@
 use std::cmp::Ordering;
 use std::option::Option;
 use std::rc::Rc;
+use std::str::CharIndices;
 use std::time::{Duration, Instant};
 
 use rand::Rng;
 
 use super::super::astroconf::AstroConf;
-use super::super::kinetics::{PosVec, Velocity};
-use super::msg::{Nid, id_of, root_id_of, parent_id_of, valid_descendant_of};
+use super::super::kinetics::{distance, PosVec, Velocity};
+use super::contacts::Contact;
+use super::msg::{Nid, id_of, root_id_of, is_id_valid_descendant_of};
 use super::msg::{NodeDesc, NodeDetails, MsgBody, Msg};
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
 pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(1000);
+pub const NEW_PARENT_FRESHNESS: Duration = Duration::from_millis(1000);
+pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(1000);
+pub const CHILD_ADDING_RATE_LIMIT: f32 = 2.0;
 
 enum TaskState {
     InProgress,
@@ -35,7 +40,17 @@ struct Node {
     locked_child: bool,
 }
 
+impl Node {
+    #[inline]
+    pub fn get_id(&self) -> u32 { self.desc.get_id() }
+}
+
 pub struct NodeManager {
+    now: Instant,
+    child_adding_rate: f32,
+    p: PosVec,
+    v: Velocity,
+
     conf: Rc<AstroConf>,
     nid: Nid,
     state: NodeState,
@@ -44,13 +59,17 @@ pub struct NodeManager {
     node_lost_duration: Duration,
     conn_msg_duration: Duration,
     last_conn_msg_t: Instant,
-    p: PosVec,
-    v: Velocity,
 }
 
 impl NodeManager {
     pub fn new_root_node(conf: &Rc<AstroConf>, p: &PosVec, v: &Velocity) -> NodeManager {
+        let now = Instant::now();
         NodeManager {
+            now,
+            child_adding_rate: 0.0,
+            p: *p,
+            v: *v,
+
             conf: conf.clone(),
             nid: vec![conf.id],
             state: NodeState::Free,
@@ -58,9 +77,7 @@ impl NodeManager {
             children: vec![],
             node_lost_duration: DEFAULT_NODE_LOST_DURATION,
             conn_msg_duration: DEFAULT_CONNECTION_MSG_DURATION,
-            last_conn_msg_t: Instant::now(),
-            p: *p,
-            v: *v,
+            last_conn_msg_t: now,
         }
     }
 
@@ -74,6 +91,9 @@ impl NodeManager {
     pub fn is_root_node(&self) -> bool { self.parent.is_none() }
 
     #[inline]
+    pub fn is_valid_ancestor_of(&self, id: u32) -> bool { is_id_valid_descendant_of(id, &self.nid) }
+
+    #[inline]
     pub fn has_parent(&self) -> bool { self.parent.is_some() }
 
     #[inline]
@@ -83,15 +103,19 @@ impl NodeManager {
     pub fn has_connections(&self) -> bool { self.has_parent() || self.has_children() }
 
     pub fn has_parent_of_id(&self, id_other: u32) -> bool {
-        self.parent.as_ref().is_some_and(|pnd| id_of(&pnd.desc.nid) == id_other)
+        self.parent.as_ref().is_some_and(|pnd| pnd.get_id() == id_other)
     }
 
     pub fn has_child_of_id(&self, id_other: u32) -> bool {
-        self.children.iter().any(|cnd| id_of(&cnd.desc.nid) == id_other)
+        self.children.iter().any(|cnd| cnd.get_id() == id_other)
     }
 
-    pub fn has_parent_or_child_of_id(&self, id_other: u32) -> bool {
-        self.has_parent_of_id(id_other) || self.has_child_of_id(id_other)
+    pub fn has_task(&self) -> bool {
+        match self.state {
+            NodeState::TaskReceived => true,
+            NodeState::TaskExcecuting(..) => true,
+            _ => false,
+        }
     }
 
     pub fn get_subswarm_size(&self) -> u32 {
@@ -115,48 +139,46 @@ impl NodeManager {
             p: self.p,
             v: self.v,
             swm: self.get_swarm_size(),
+            tsk: self.has_task(),
         }
     }
 
     pub fn generate_node_details(&self) -> NodeDetails {
         NodeDetails {
             subswarm: self.get_subswarm_size(),
-            free: match self.state {
-                NodeState::Free => true,
-                _ => false,
-            },
         }
     }
 
     pub fn update_node(&mut self, p: &PosVec, v: &Velocity,
-                       rm: &Vec<u32>, msgs: &Vec<&Msg>, neighbours: &Vec<&NodeDesc>)
+                       rm: &Vec<u32>, msgs: &Vec<&Msg>, neighbours: &Vec<&Contact>)
     -> (Velocity, Vec<Msg>) {
+        let previous = self.now;
+        self.now = Instant::now();
+        self.child_adding_rate *= ((self.now - previous).as_secs_f32() / CHILD_ADDING_TIMESCALE.as_secs_f32()).exp();
         self.p = *p;
         self.v = *v;
-        self.remove_no_contact_nodes(rm);  // contact-losing events
-        let now = Instant::now();
-        for msg in msgs {  // message events
-            self.process_msg(now, msg);
-        }
-        self.remove_no_connection_nodes(now);  // connection-losing events
-
-        // messages may be lost, so generally they should carry state, rather than carry events.
-        // if an event is not received by all parties involved, its (partial) effect should be revocable.
+        // messages may be lost, so in most cases they should carry state, rather than carry events.
+        // if an event message is not received by all parties involved, its (partial) effect should be revocable.
         let mut msgs_out: Vec<Msg> = vec![];
-        if let Some(mut msgs_to_send) = self.explore_neighbours(now, neighbours) {  // neighbourhood events
-            msgs_out.append(&mut msgs_to_send);
+
+        self.remove_no_contact_nodes(rm);  // contact-losing events
+        for msg in msgs {  // message events
+            msgs_out.append(&mut self.process_msg(msg, neighbours));
         }
+        self.remove_no_connection_nodes();  // connection-losing events
+
+        msgs_out.append(&mut self.explore_neighbourhood(neighbours));  // neighbourhood events
         // TODO:
         // self.manage_state();
         // msgs_out.append(self.maybe_generate_state_msg());
-        if let Some(msg_to_send) = self.maybe_generate_connection_msg(now) {
+        if let Some(msg_to_send) = self.maybe_generate_connection_msg() {
             msgs_out.push(msg_to_send);
         }
         (self.calc_next_v(), msgs_out)
     }
 
     fn remove_no_contact_nodes(&mut self, rm: &Vec<u32>) {
-        if self.parent.as_ref().is_some_and(|pnd| rm.contains(&id_of(&pnd.desc.nid))) {
+        if self.parent.as_ref().is_some_and(|pnd| rm.contains(&pnd.get_id())) {
             self.remove_parent();
         }
         for cid in rm {
@@ -164,87 +186,100 @@ impl NodeManager {
         }
     }
 
-    fn process_msg(&mut self, now: Instant, msg: &Msg) {
+    fn process_msg(&mut self, msg: &Msg, neighbours: &Vec<&Contact>) -> Vec<Msg> {
         let desc_sdr = &msg.sender;
+        let mut msg_out: Vec<Msg> = vec![];
         match &msg.body {
-            MsgBody::BROADCASTING => (),
-            MsgBody::CONNECTION(dtl) => self.update_connection(desc_sdr, dtl, now),
-            MsgBody::JOIN(dtl) => self.try_add_child(desc_sdr, dtl, now),
-            MsgBody::LEAVE => self.remove_child_with_id(id_of(&desc_sdr.nid)),
-            MsgBody::TASK(..) => (),
+            MsgBody::Broadcasting => (),
+            MsgBody::Connection(dtl) => self.update_connection(desc_sdr, dtl),
+
+            MsgBody::Join(dtl) => msg_out.push(self.add_child_or_reject(desc_sdr, dtl)),
+            MsgBody::Accept => (),
+            MsgBody::Reject => self.remove_parent(),
+
+            MsgBody::Leave => self.remove_child_with_id(desc_sdr.get_id()),
+
+            MsgBody::ChangeParent(pid_new) => self.change_parent(desc_sdr, pid_new, neighbours),
+
+            MsgBody::Task(..) => (),
         }
+        msg_out
     }
 
-    fn remove_no_connection_nodes(&mut self, now: Instant) {
+    fn remove_no_connection_nodes(&mut self) {
         if let Some(nd) = &self.parent {
-            if now - nd.last_heard > self.node_lost_duration {
+            if self.now - nd.last_heard > self.node_lost_duration {
                 self.remove_parent();
             }
         }
         let rm: Vec<u32> = self.children.iter().filter(
-            |nd| now - nd.last_heard > self.node_lost_duration
-        ).map(|nd| id_of(&nd.desc.nid)).collect();
+            |nd| self.now - nd.last_heard > self.node_lost_duration
+        ).map(|nd| nd.get_id()).collect();
         for cid in rm {
             self.remove_child_with_id(cid);
         }
     }
 
-    // TODO: check task sucess/failure in this function
-    fn explore_neighbours(&mut self, now: Instant, neighbours: &Vec<&NodeDesc>)
-    -> Option<Vec<Msg>> {
-        match self.state {
-            NodeState::Free => {
-                if let Some(m) = self.join_other_tree(neighbours, now) {
-                    Some(vec![m])
-                } else {
-                    None
-                }
-            },
-            _ => None,
-        }
-    }
-
-    // TODO: this is a bad algorithm, and too long a function.
-    fn join_other_tree(&mut self, neighbours: &Vec<&NodeDesc>, now: Instant) -> Option<Msg> {
-        // TODO: freshness of the nodes when get nearby targets?
-        // TODO: the number of children also needs considered
-        let root_self = self.get_root_id();
-        let mut candidates: Vec<&NodeDesc> = neighbours.iter().map(|r| *r).filter(
-            |desc| root_id_of(&desc.nid) != root_self).collect();
-        candidates.sort_unstable_by(|desc1, desc2| {
-            let swm_cmp = desc1.swm.cmp(&desc2.swm);
-            match swm_cmp {
-                Ordering::Equal => root_id_of(&desc2.nid).cmp(&root_id_of(&desc1.nid)),
-                _ => swm_cmp,
+    fn explore_neighbourhood(&mut self, neighbours: &Vec<&Contact>) -> Vec<Msg> {
+        let mut msg_out: Vec<Msg> = vec![];
+        if let NodeState::Free = self.state {
+            if let Some(m) = self.try_join_other_swarm(neighbours) {
+                msg_out.push(m);
             }
-        });
-        match candidates.last() {
+        }
+        msg_out
+    }
+
+    fn try_join_other_swarm(&mut self, neighbours: &Vec<&Contact>) -> Option<Msg> {
+        let desc_self = self.generate_node_desc();
+        match self.find_parent_candidate(&desc_self, neighbours) {
             None => None,
-            Some(desc) => {
-                let swarm_size = self.get_swarm_size();
-                let mut rng = rand::thread_rng();
-                if desc.swm < swarm_size {
+            Some(candidate) => {
+                if !self.set_parent(candidate) {
                     None
-                } else if desc.swm == swarm_size && self.get_root_id() <= root_id_of(&desc.nid) {
-                    None
-                } else if !self.is_root_node() && rng.gen_range(0..10) < 5 {  // TODO: try to avoid random number
-                    None
-                } else if self.set_parent(desc, now) {  // TODO: wait for swarm_size to update
-                    Some(Msg {
-                        sender: self.generate_node_desc(),
-                        to_ids: vec![id_of(&desc.nid)],
-                        body: MsgBody::JOIN(self.generate_node_details()),
-                    })
                 } else {
-                    None
+                    let pid_new = candidate.get_id();
+                    Some(Msg {
+                        sender: desc_self,
+                        to_ids: vec![pid_new],
+                        body: MsgBody::Join(self.generate_node_details()),
+                    })
                 }
             },
         }
     }
 
-    fn maybe_generate_connection_msg(&mut self, now: Instant) -> Option<Msg> {
-        if now - self.last_conn_msg_t > self.conn_msg_duration && self.has_connections() {
-            self.last_conn_msg_t = now;
+    fn find_parent_candidate<'a, 'b, 'c>(&self, desc_self: &'a NodeDesc, neighbours: &Vec<&'b Contact>)
+    -> Option<&'c NodeDesc> where 'a: 'c, 'b: 'c {
+        let root_id_self = self.get_root_id();
+        let mut candidates: Vec<&NodeDesc> = neighbours.iter().filter(
+            |t| self.now - t.last_heard < NEW_PARENT_FRESHNESS  // freshness of candidate
+        ).map(|t| &t.desc).filter(
+            |nd| !nd.tsk && nd.get_root_id() != root_id_self  // no task, in different swarm
+        ).collect();
+        candidates.push(&desc_self);
+        candidates.sort_unstable_by(|desc1, desc2| {
+            let cmp_swm = desc2.swm.cmp(&desc1.swm);  // bigger swarm size
+            if cmp_swm != Ordering::Equal { return cmp_swm; }
+            let cmp_root_id = desc1.get_root_id().cmp(&desc2.get_root_id());  // smaller root id
+            if cmp_root_id != Ordering::Equal { return cmp_root_id; }
+            let cmp_dist = distance(&desc1.p, &self.p).partial_cmp(
+                &distance(&desc2.p, &self.p)).unwrap();  // closer node
+            cmp_dist
+            // may also take into account the number of children, but NodeDesc doesn't carry this info
+            // may also take into account the depth(rank) of the node on the swarm tree
+        });
+        let candidate: &NodeDesc = candidates.first().unwrap();
+        if candidate.get_id() == desc_self.get_id() {  // all other swarms are worse than the current swarm
+            None
+        } else {
+            Some(candidate)
+        }
+    }
+
+    fn maybe_generate_connection_msg(&mut self) -> Option<Msg> {
+        if self.now - self.last_conn_msg_t > self.conn_msg_duration && self.has_connections() {
+            self.last_conn_msg_t = self.now;
             Some(self.generate_connection_msg())
         } else {
             None
@@ -254,17 +289,18 @@ impl NodeManager {
     fn generate_connection_msg(&self) -> Msg {
         let mut to_ids: Vec<u32> = vec![];
         if let Some(nd) = &self.parent {
-            to_ids.push(id_of(&nd.desc.nid));
+            to_ids.push(nd.get_id());
         }
         let mut cids: Vec<u32> = vec![];
         for nd in &self.children {
-            to_ids.push(id_of(&nd.desc.nid));
-            cids.push(id_of(&nd.desc.nid));
+            let cid = nd.get_id();
+            to_ids.push(cid);
+            cids.push(cid);
         }
         Msg {
             sender: self.generate_node_desc(),
             to_ids,
-            body: MsgBody::CONNECTION(self.generate_node_details()),
+            body: MsgBody::Connection(self.generate_node_details()),
         }
     }
 
@@ -290,73 +326,80 @@ impl NodeManager {
         }
     }
 
-    fn update_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails, now: Instant) {
-        if !self.has_parent_of_id(id_of(&desc.nid)) {
+    fn update_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails) {
+        if !self.has_parent_of_id(desc.get_id()) {
             // the description may be from a child
-            self.update_child_connection(desc, dtl, now);
+            self.update_child_connection(desc, dtl);
         } else {
             // the description is from recognised parent
             let id = self.get_id();
-            if valid_descendant_of(id, &desc.nid) {  // valid parent
+            if desc.is_valid_ancestor_of(id) {  // valid parent
                 let pnd = self.parent.as_mut().unwrap();
                 pnd.desc = desc.clone();
                 pnd.details = dtl.clone();
-                pnd.last_heard = now;
+                pnd.last_heard = self.now;
                 self.on_parent_info_updated();
             }  // otherwise, just wait the parent to timeout and be removed
         }
     }
 
-    fn update_child_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails, now: Instant) {
+    fn update_child_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails) {
         let id = self.get_id();
-        let id_other = id_of(&desc.nid);
+        let id_other = desc.get_id();
         for cnd in &mut self.children {
-            let cid = id_of(&cnd.desc.nid);
+            let cid = cnd.get_id();
             if cid == id_other {
                 // the description is from a recognised child
-                if valid_descendant_of(id_other, &self.nid)
-                    && parent_id_of(&desc.nid).is_some_and(|v| v == id) {
+                if is_id_valid_descendant_of(id_other, &self.nid)
+                    && desc.get_parent_id().is_some_and(|v| v == id) {
                     // valid child,
                     // and the child recognised this node as its parent.
                     cnd.desc = desc.clone();
                     cnd.details = dtl.clone();
-                    cnd.last_heard = now;
+                    cnd.last_heard = self.now;
                 }  // otherwise, just wait the child to timeout and be removed
                 return;
             }
         }
     }
 
-    fn try_add_child(&mut self, desc: &NodeDesc, dtl: &NodeDetails, now: Instant) {
-        let id_other = id_of(&desc.nid);
-        if self.has_parent_or_child_of_id(id_other) {
-            // the other node is already a recognised child
-            return;
+    fn add_child_or_reject(&mut self, desc: &NodeDesc, dtl: &NodeDetails) -> Msg {
+        let id_other = desc.get_id();
+        let msg_body: MsgBody;
+        if !self.is_valid_ancestor_of(id_other)  // not valid child
+            || self.has_task()  // has task, won't accept child
+            || self.child_adding_rate > CHILD_ADDING_RATE_LIMIT {  // number of children increases too fast
+            msg_body = MsgBody::Reject;
+        } else {
+            msg_body = MsgBody::Accept;
+            if !self.has_child_of_id(id_other) {
+                self.children.push(Node {
+                    desc: desc.clone(),
+                    details: dtl.clone(),
+                    last_heard: self.now,
+                    locked_child: false,
+                });
+                self.child_adding_rate += 1.0;
+            }  // else, the other node is already a recognised child
         }
-        if !valid_descendant_of(id_other, &self.nid) {
-            // the other node is not a valid child of this node
-            return;
+        Msg {
+            sender: self.generate_node_desc(),
+            to_ids: vec![id_other],
+            body: msg_body,
         }
-        self.children.push(Node {
-            desc: desc.clone(),
-            details: dtl.clone(),
-            last_heard: now,
-            locked_child: false,
-        })
     }
 
-    fn set_parent(&mut self, desc: &NodeDesc, now: Instant) -> bool {
+    fn set_parent(&mut self, desc: &NodeDesc) -> bool {
         let id = self.get_id();
-        if !valid_descendant_of(id, &desc.nid) {
+        if !self.is_valid_ancestor_of(id) {
             false
         } else {  // valid parent
             self.parent = Some(Node {
                 desc: desc.clone(),
                 details: NodeDetails {
                     subswarm: 0,
-                    free: true,
                 },
-                last_heard: now,
+                last_heard: self.now,
                 locked_child: false,
             });
             self.on_parent_info_updated();
@@ -380,7 +423,7 @@ impl NodeManager {
             Some(pnd) => {
                 self.nid = pnd.desc.nid.clone();
                 self.nid.push(id);
-                if pnd.details.free {
+                if !pnd.desc.tsk {
                     self.state = NodeState::Free;
                 }
             },
@@ -389,7 +432,7 @@ impl NodeManager {
 
     fn remove_child_with_id(&mut self, cid: u32) {
         for (idx, cnd) in self.children.iter().enumerate() {
-            if id_of(&cnd.desc.nid) == cid {
+            if cnd.get_id() == cid {
                 self.remove_child_with_idx(idx);
                 break;
             }

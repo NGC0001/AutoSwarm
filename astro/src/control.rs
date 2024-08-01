@@ -12,6 +12,7 @@ pub use msg::Msg;
 
 use collivoid::ColliVoid;
 use contacts::Contacts;
+use msg::NodeDesc;
 use nm::NodeManager;
 
 pub struct Control {
@@ -34,9 +35,11 @@ impl Control {
     pub fn update(&mut self, p: &PosVec, v: &Velocity, msgs_in: &Vec<Msg>)
     -> (Velocity, Vec<Msg>) {
         let (neighbours, _, rm, mut msgs) = self.contacts.update(p, msgs_in);
+        let neighbours_desc: Vec<&NodeDesc> = neighbours.iter().map(|ct| &ct.desc).collect();
         msgs.retain(|m| m.to_ids.contains(&self.conf.id));
         let (next_v, msgs_out) = self.nm.update_node(p, v, &rm, &msgs, &neighbours);
-        let safe_v = self.collivoid.get_safe_v(&next_v, p, &neighbours);
+        // TODO: broadcasting
+        let safe_v = self.collivoid.get_safe_v(&next_v, p, &neighbours_desc);
         (safe_v, msgs_out)
     }
 }
