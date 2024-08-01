@@ -1,0 +1,87 @@
+<mxfile host="Electron" modified="2024-08-01T20:58:34.078Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.4.8 Chrome/124.0.6367.207 Electron/30.0.6 Safari/537.36" etag="aBW9Fe-QwHzbeL5obRP3" version="24.4.8" type="device">
+  <diagram name="Page-1" id="5TOnqpEzXu9KvmxTrv7Q">
+    <mxGraphModel dx="1026" dy="659" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-3" target="qMCYXL3dUeA2pDKhbFgR-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-3" target="qMCYXL3dUeA2pDKhbFgR-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="128" y="250" />
+              <mxPoint x="472" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-3" value="free" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="60" y="160" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-4" target="qMCYXL3dUeA2pDKhbFgR-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-4" value="parent locked" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="260" y="160" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-5" target="qMCYXL3dUeA2pDKhbFgR-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-5" target="qMCYXL3dUeA2pDKhbFgR-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="110" />
+              <mxPoint x="100" y="110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-5" value="task received" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="460" y="160" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-6" target="qMCYXL3dUeA2pDKhbFgR-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="290" />
+              <mxPoint x="100" y="290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-6" value="task executing" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="660" y="160" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-15" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="185" y="168" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-16" value="2" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="390" y="168" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-17" value="3" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="600" y="168" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-18" value="4" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="384" y="290" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-4" target="qMCYXL3dUeA2pDKhbFgR-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.2;entryY=0.013;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;fontSize=16;" edge="1" parent="1" source="qMCYXL3dUeA2pDKhbFgR-6" target="qMCYXL3dUeA2pDKhbFgR-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="80" />
+              <mxPoint x="76" y="80" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-23" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="185" y="220" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-24" value="free: nodes do merging algorithm, can join/leave a swarm freely&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;br style=&quot;font-size: 16px;&quot;&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;parent locked: nodes will not change parent&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;br style=&quot;font-size: 16px;&quot;&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;task received: nodes&amp;nbsp;&lt;span style=&quot;font-size: 16px;&quot;&gt;carry out task calculation,&lt;/span&gt;&lt;span style=&quot;font-size: 16px;&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 16px;&quot;&gt;adjust their children, and allocate subtasks to their children&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;br style=&quot;font-size: 16px;&quot;&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;task executing: nodes move to calculated point&lt;/div&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;textShadow=0;labelBackgroundColor=none;labelBorderColor=default;spacingTop=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="780" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="qMCYXL3dUeA2pDKhbFgR-25" value="1 for root node: user task received&lt;div style=&quot;font-size: 16px;&quot;&gt;1 for other nodes: parent-locking message received from parent&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;br style=&quot;font-size: 16px;&quot;&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;2: subtask received from parent&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;br style=&quot;font-size: 16px;&quot;&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;3: children adjusted, and subtasks sent to children&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;br style=&quot;font-size: 16px;&quot;&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;4 for root node: all subtask completed, or any failed&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;4 for other nodes: parent node changed to free state&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;labelBorderColor=default;textShadow=0;spacingTop=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="525" width="470" height="180" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
