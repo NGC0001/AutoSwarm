@@ -5,7 +5,7 @@ use super::super::kinetics::{PosVec, distance};
 use super::msg::{id_of, Msg, Nid, NodeDesc};
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
-pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.9;
+pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.95;
 pub const DEFAULT_LOST_DURATION: Duration = Duration::from_secs(3);
 
 pub struct Contact {
@@ -49,7 +49,18 @@ impl Contacts {
         }
     }
 
-    // messages in `msgs_in`` should order by arrival time.
+    // `msgs_in`: all messages received by the communication module.
+    //
+    // with these input messages, pick out those nodes that go out of contact,
+    // and those nodes that go into contact.
+    // a node farther than `out_of_range_threshold * msg_range` is considered out of contact.
+    // a node nearer than `in_range_threshold * msg_range` is considered into contact.
+    //
+    // `neighbours`: all nodes currently in contact
+    // `add`: nodes newly into contact
+    // `rm`: nodes newly out of contact
+    // `msgs`: messages sent by nodes in contact
+    //
     // returned `add` and `rm` should not overlap.
     pub fn update<'a>(&mut self, p_self: &PosVec, msgs_in: &'a Vec<Msg>)
     -> (Vec<&Contact>, Vec<&'a Nid>, Vec<u32>, Vec<&'a Msg>) {
@@ -66,7 +77,8 @@ impl Contacts {
         let (add, mut rm) = self.update_by_msg_positions(now, &m_map);
         rm.append(&mut self.filter_out_lost_contacts(now));  // should contain no duplicate ids
         let msgs = self.pick_messages_in_range(msgs_in);
-        (self.get_contacts(), add, rm, msgs)
+        let neighbours = self.get_contacts();
+        (neighbours, add, rm, msgs)
     }
 
     pub fn get_contacts(&self) -> Vec<&Contact> {

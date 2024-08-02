@@ -105,13 +105,16 @@ impl Transceiver {
         self.writer.write_all(&len_bytes).unwrap();
         self.writer.write_all(data.as_bytes()).unwrap();
         self.writer.write_all(b"\n").unwrap();
+        let mut num_flush_try = 0;
         while match self.writer.flush() {
             Ok(..) => Ok(false),  // successfully flushed, no more loops
             Err(e) => match e.kind() {
-                io::ErrorKind::WouldBlock => Ok(true),  // busy resource, try again, may block
+                io::ErrorKind::WouldBlock => Ok(num_flush_try < 3),  // busy resource, try again, may block
                 _ => Err(e),  // true error
             }
         }.unwrap() {
+            num_flush_try += 1;
+            println!("redo send");
             thread::sleep(SEND_RETRY_INTERVAL);
         }
     }

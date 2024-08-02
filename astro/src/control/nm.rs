@@ -10,10 +10,10 @@ use super::msg::{Nid, id_of, root_id_of, is_id_valid_descendant_of};
 use super::msg::{NodeDesc, NodeDetails, MsgBody, Msg};
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
-pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(1000);
+pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(200);
 pub const NEW_PARENT_FRESHNESS: Duration = Duration::from_millis(1000);
-pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(1000);
-pub const CHILD_ADDING_RATE_LIMIT: f32 = 2.0;
+pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(300);
+pub const CHILD_ADDING_RATE_LIMIT: f32 = 1.0;
 
 enum TaskState {
     InProgress,
@@ -79,6 +79,9 @@ impl NodeManager {
     }
 
     #[inline]
+    pub fn get_nid(&self) -> &Vec<u32> { &self.nid }
+
+    #[inline]
     pub fn get_id(&self) -> u32 { id_of(&self.nid) }
 
     #[inline]
@@ -89,6 +92,11 @@ impl NodeManager {
 
     #[inline]
     pub fn is_valid_ancestor_of(&self, id: u32) -> bool { is_id_valid_descendant_of(id, &self.nid) }
+
+    #[inline]
+    pub fn is_valid_descendant_of(&self, desc: &NodeDesc) -> bool {
+        desc.is_valid_ancestor_of(self.get_id())
+    }
 
     #[inline]
     pub fn has_parent(&self) -> bool { self.parent.is_some() }
@@ -151,7 +159,7 @@ impl NodeManager {
     -> (Velocity, Vec<Msg>) {
         let previous = self.now;
         self.now = Instant::now();
-        self.child_adding_rate *= ((self.now - previous).as_secs_f32() / CHILD_ADDING_TIMESCALE.as_secs_f32()).exp();
+        self.child_adding_rate *= (-(self.now - previous).as_secs_f32() / CHILD_ADDING_TIMESCALE.as_secs_f32()).exp();
         self.p = *p;
         self.v = *v;
         // messages may be lost, so in most cases they should carry state, rather than carry events.
@@ -165,12 +173,10 @@ impl NodeManager {
         self.remove_no_connection_nodes();  // connection-losing events
 
         msgs_out.append(&mut self.explore_neighbourhood(neighbours));  // neighbourhood events
-        // TODO:
-        // self.manage_state();
-        // msgs_out.append(self.maybe_generate_state_msg());
-        if let Some(msg_to_send) = self.maybe_generate_connection_msg() {
-            msgs_out.push(msg_to_send);
-        }
+
+        // TODO: msgs_out.append(self.maybe_generate_state_msg());
+
+        self.maybe_generate_connection_msg(&mut msgs_out);
         (self.calc_next_v(), msgs_out)
     }
 
@@ -187,7 +193,7 @@ impl NodeManager {
         let desc_sdr = &msg.sender;
         let mut msg_out: Vec<Msg> = vec![];
         match &msg.body {
-            MsgBody::Broadcasting => (),
+            MsgBody::Empty => (),
             MsgBody::Connection(dtl) => self.update_connection(desc_sdr, dtl),
 
             MsgBody::Join(dtl) => msg_out.push(self.add_child_or_reject(desc_sdr, dtl)),
@@ -263,12 +269,15 @@ impl NodeManager {
         }
     }
 
-    fn maybe_generate_connection_msg(&mut self) -> Option<Msg> {
-        if self.now - self.last_conn_msg_t > self.conn_msg_duration && self.has_connections() {
+    fn maybe_generate_connection_msg(&mut self, msgs_out: &mut Vec<Msg>) {
+        // TODO:
+        // connection message should be sent periodically, or immediately if node status changes.
+        // however currently cannot detect node status change.
+        // instead, check whether `msgs_out` isn't empty, which indicates potential status change.
+        if !msgs_out.is_empty() || (
+            self.now - self.last_conn_msg_t > self.conn_msg_duration && self.has_connections()) {
+            msgs_out.push(self.generate_connection_msg());
             self.last_conn_msg_t = self.now;
-            Some(self.generate_connection_msg())
-        } else {
-            None
         }
     }
 
@@ -297,7 +306,7 @@ impl NodeManager {
                 // TODO: this is a bad algorithm.
                 let s = &pn.desc.p - &self.p;
                 let dist: f32 = s.norm();
-                if dist < self.conf.msg_range / 3.0 {
+                if dist < self.conf.msg_range / 2.0 {
                     Velocity::zero()
                 } else {
                     let factor: f32 = (self.conf.max_v / 2.0) / dist;
@@ -313,19 +322,18 @@ impl NodeManager {
     }
 
     fn update_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails) {
-        if !self.has_parent_of_id(desc.get_id()) {
-            // the description may be from a child
-            self.update_child_connection(desc, dtl);
-        } else {
+        if self.has_parent_of_id(desc.get_id()) {
             // the description is from recognised parent
-            let id = self.get_id();
-            if desc.is_valid_ancestor_of(id) {  // valid parent
+            if self.is_valid_descendant_of(desc) {  // valid parent
                 let pnd = self.parent.as_mut().unwrap();
                 pnd.desc = desc.clone();
                 pnd.details = dtl.clone();
                 pnd.last_heard = self.now;
                 self.on_parent_info_updated();
             }  // otherwise, just wait the parent to timeout and be removed
+        } else {
+            // the description may be from a child
+            self.update_child_connection(desc, dtl);
         }
     }
 
@@ -355,6 +363,7 @@ impl NodeManager {
         if !self.is_valid_ancestor_of(id_other)  // not valid child
             || self.has_task()  // has task, won't accept child
             || self.child_adding_rate > CHILD_ADDING_RATE_LIMIT {  // number of children increases too fast
+            // TODO: do not reject if the join is by parent ChangeParent
             msg_body = MsgBody::Reject;
         } else {
             msg_body = MsgBody::Accept;
@@ -366,6 +375,7 @@ impl NodeManager {
                     locked_child: false,
                 });
                 self.child_adding_rate += 1.0;
+                println!("new connection: {:?} <- {}", &self.nid, id_other);
             }  // else, the other node is already a recognised child
         }
         Msg {
@@ -402,10 +412,7 @@ impl NodeManager {
     }
 
     fn set_parent(&mut self, desc: &NodeDesc) -> bool {
-        let id = self.get_id();
-        if !self.is_valid_ancestor_of(id) {
-            false
-        } else {  // valid parent
+        if self.is_valid_descendant_of(desc) {  // valid parent
             self.parent = Some(Node {
                 desc: desc.clone(),
                 details: NodeDetails {
@@ -415,8 +422,9 @@ impl NodeManager {
                 locked_child: false,
             });
             self.on_parent_info_updated();
-            println!("new connection: {:?} <- {}", desc.nid, id);
             true
+        } else {
+            false
         }
     }
 
@@ -462,5 +470,6 @@ impl NodeManager {
         if cnd.locked_child {
             self.state = NodeState::TaskExcecuting(TaskState::Failed);
         }
+        println!("delete connection: {:?} <-x {}", &self.nid, cnd.get_id());
     }
 }

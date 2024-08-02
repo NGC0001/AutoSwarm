@@ -85,8 +85,8 @@ pub struct Task {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum MsgBody {
-    Broadcasting,  // sender reports basic status to all neighbours, no specific receiver
-    Connection(NodeDetails),  // sender repports status to receiver (parent and children)
+    Empty,
+    Connection(NodeDetails),  // sender keeps connection with receiver (parent and children)
 
     Join(NodeDetails),  // sender wants to set the receiver as its parent
     Accept,  // sender rejects the receiver as its child
