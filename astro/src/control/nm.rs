@@ -1,10 +1,7 @@
 use std::cmp::Ordering;
 use std::option::Option;
 use std::rc::Rc;
-use std::str::CharIndices;
 use std::time::{Duration, Instant};
-
-use rand::Rng;
 
 use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
@@ -182,7 +179,7 @@ impl NodeManager {
             self.remove_parent();
         }
         for cid in rm {
-            self.remove_child_with_id(*cid);
+            self.remove_child_of_id(*cid);
         }
     }
 
@@ -195,11 +192,11 @@ impl NodeManager {
 
             MsgBody::Join(dtl) => msg_out.push(self.add_child_or_reject(desc_sdr, dtl)),
             MsgBody::Accept => (),
-            MsgBody::Reject => self.remove_parent(),
+            MsgBody::Reject => self.remove_parent_of_id(desc_sdr.get_id()),
 
-            MsgBody::Leave => self.remove_child_with_id(desc_sdr.get_id()),
+            MsgBody::Leave => self.remove_child_of_id(desc_sdr.get_id()),
 
-            MsgBody::ChangeParent(pid_new) => self.change_parent(desc_sdr, pid_new, neighbours),
+            MsgBody::ChangeParent(pid_new) => msg_out.append(&mut self.change_parent(*pid_new, neighbours)),
 
             MsgBody::Task(..) => (),
         }
@@ -216,7 +213,7 @@ impl NodeManager {
             |nd| self.now - nd.last_heard > self.node_lost_duration
         ).map(|nd| nd.get_id()).collect();
         for cid in rm {
-            self.remove_child_with_id(cid);
+            self.remove_child_of_id(cid);
         }
     }
 
@@ -234,18 +231,7 @@ impl NodeManager {
         let desc_self = self.generate_node_desc();
         match self.find_parent_candidate(&desc_self, neighbours) {
             None => None,
-            Some(candidate) => {
-                if !self.set_parent(candidate) {
-                    None
-                } else {
-                    let pid_new = candidate.get_id();
-                    Some(Msg {
-                        sender: desc_self,
-                        to_ids: vec![pid_new],
-                        body: MsgBody::Join(self.generate_node_details()),
-                    })
-                }
-            },
+            Some(candidate) => self.set_parent_and_create_join_msg(candidate),
         }
     }
 
@@ -389,6 +375,32 @@ impl NodeManager {
         }
     }
 
+    fn change_parent(&mut self, pid_new: u32, neighbours: &Vec<&Contact>) -> Vec<Msg> {
+        let mut out: Vec<Msg> = vec![];
+        self.remove_parent();
+        for t in neighbours {
+            if t.desc.get_id() == pid_new {
+                if let Some(m) = self.set_parent_and_create_join_msg(&t.desc) {
+                    out.push(m);
+                }
+                break;
+            }
+        }
+        out
+    }
+
+    fn set_parent_and_create_join_msg(&mut self, desc: &NodeDesc) -> Option<Msg> {
+        if self.set_parent(desc) {
+            Some(Msg {
+                sender: self.generate_node_desc(),
+                to_ids: vec![desc.get_id()],
+                body: MsgBody::Join(self.generate_node_details()),
+            })
+        } else {
+            None
+        }
+    }
+
     fn set_parent(&mut self, desc: &NodeDesc) -> bool {
         let id = self.get_id();
         if !self.is_valid_ancestor_of(id) {
@@ -405,6 +417,12 @@ impl NodeManager {
             self.on_parent_info_updated();
             println!("new connection: {:?} <- {}", desc.nid, id);
             true
+        }
+    }
+
+    fn remove_parent_of_id(&mut self, pid: u32) {
+        if self.has_parent_of_id(pid) {
+            self.remove_parent();
         }
     }
 
@@ -430,16 +448,16 @@ impl NodeManager {
         };
     }
 
-    fn remove_child_with_id(&mut self, cid: u32) {
+    fn remove_child_of_id(&mut self, cid: u32) {
         for (idx, cnd) in self.children.iter().enumerate() {
             if cnd.get_id() == cid {
-                self.remove_child_with_idx(idx);
+                self.remove_child_of_idx(idx);
                 break;
             }
         }
     }
 
-    fn remove_child_with_idx(&mut self, idx: usize) {
+    fn remove_child_of_idx(&mut self, idx: usize) {
         let cnd = self.children.remove(idx);
         if cnd.locked_child {
             self.state = NodeState::TaskExcecuting(TaskState::Failed);

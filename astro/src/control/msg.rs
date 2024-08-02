@@ -79,7 +79,7 @@ pub struct Line {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Task {
-    pub line: Line,
+    pub lines: Vec<Line>,
     pub duration: Duration,
 }
 
