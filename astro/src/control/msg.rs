@@ -2,6 +2,7 @@ use std::{option::Option, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
+use super::super::kinetics::distance;
 use super::{PosVec, Velocity};
 
 // special id of ground control station
@@ -85,12 +86,33 @@ impl NodeDesc {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct NodeDetails {
     pub subswarm: u32,  // the size of the subswarm, up-flowing data
+    pub fixed: bool,  // whether the subswarm is fixed (no join, no leave), up-flowing data
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct JoinAppl {
+    pub dtl: NodeDetails,
+    pub src_tree: u32,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Line {
     pub points: Vec<PosVec>,
     pub closed: bool,
+}
+
+impl Line {
+    pub fn calc_length(&self) -> f32 {
+        assert!(2 <= self.points.len());
+        let mut len: f32 = 0.0;
+        for i in 1..self.points.len() {
+            len += distance(&self.points[i], &self.points[i - 1]);
+        }
+        if self.closed {
+            len += distance(&self.points.last().unwrap(), &self.points.first().unwrap())
+        }
+        len
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -101,12 +123,19 @@ pub struct Task {
     pub comm_point: Option<PosVec>,
 }
 
+impl Task {
+    pub fn calc_length(&self) -> f32 {
+        assert!(!self.lines.is_empty());
+        self.lines.iter().map(|l| l.calc_length()).sum()
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 pub enum MsgBody {
     Empty,
     Connection(NodeDetails),  // sender keeps connection with receiver (parent and children)
 
-    Join(NodeDetails),  // sender wants to set the receiver as its parent
+    Join(JoinAppl),  // sender wants to set the receiver as its parent
     Accept,  // sender rejects the receiver as its child
     Reject,  // sender accepts the receiver as its child
 

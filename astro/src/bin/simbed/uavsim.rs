@@ -26,10 +26,6 @@ impl MsgPack {
     pub fn get_source_p(&self) -> &PosVec {
         &self.p
     }
-
-    pub fn get_num_data(&self) -> usize {
-        self.data_vec.len()
-    }
 }
 
 // provides simulation support for a running UAV.
