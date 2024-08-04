@@ -1,9 +1,10 @@
 use clap::Parser;
 
+mod gcs;
+mod simbed;
 mod uavconf;
 mod uavsim;
 mod uav;
-mod simbed;
 
 use simbed::SimBed;
 
@@ -14,10 +15,12 @@ struct Args {
     astro_bin: String,
     #[arg(long, default_value_t = 4)]
     num_uav: u32,
+    #[arg(long, default_value_t = String::new())]
+    task_book: String,
 }
 
 fn main() {
     let args = Args::parse();
-    let mut simbed = SimBed::new(args.num_uav, &args.astro_bin);
+    let mut simbed = SimBed::new(args.num_uav, &args.astro_bin, &args.task_book);
     simbed.run_sim_loop();
 }

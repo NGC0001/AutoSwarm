@@ -6,7 +6,7 @@ use std::rc::Rc;
 use astro::comm;
 use astro::kinetics::{self, PosVec, Velocity, KntcMsg, distance};
 use astro::gps::{self, GpsMsg};
-use astro::control::Msg;
+use astro::control::msg::Msg;
 use astro::transceiver::Transceiver;
 
 use super::uavconf::UavConf;
@@ -93,7 +93,7 @@ impl UavSim {
     }
 
     // receive messages from other UAVs, filtering by distance
-    pub fn dispose_comm_msgs(&self, msg_packs: &Vec<MsgPack>) {
+    pub fn dispose_comm_msg_packs(&self, msg_packs: &Vec<MsgPack>) {
         for pack in msg_packs {
             if pack.id == self.conf.id {
                 continue;  // filtering out messages sent by itself
@@ -103,12 +103,25 @@ impl UavSim {
             }
             for data in &pack.data_vec {
                 let msg: Msg = serde_json::from_str(data).unwrap();
-                if !msg.to_ids.is_empty() && !msg.to_ids.contains(&self.conf.id) {
-                    continue;  // message is not for this uav
+                if !self.should_receive_msg(&msg) {
+                    continue;
                 }
                 self.tc.borrow_mut().send_raw(comm::CHANNEL, data);
             }
         }
+    }
+
+    pub fn dispose_comm_msgs(&self, msgs: &Vec<Msg>) {
+        for msg in msgs {
+            if !self.should_receive_msg(msg) {
+                continue;
+            }
+            self.tc.borrow_mut().send(comm::CHANNEL, msg);
+        }
+    }
+
+    pub fn should_receive_msg(&self, msg: &Msg) -> bool {
+        msg.to_ids.is_empty() || msg.to_ids.contains(&self.conf.id)
     }
 
     pub fn overlap_with_uav_at(&self, other_p: &PosVec) -> bool {  // assuming same radius

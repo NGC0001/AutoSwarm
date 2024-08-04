@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{PosVec, Velocity};
 
+// special id of ground control station
+pub const GCS_ID: u32 = u32::max_value();
+
 // the node id of a uav in a tree structure.
 // it is: id(top) -> id -> ... -> id(this)
 pub type Nid = Vec<u32>;
@@ -64,6 +67,19 @@ impl NodeDesc {
     pub fn is_valid_ancestor_of(&self, id: u32) -> bool {
         is_id_valid_descendant_of(id, &self.nid)
     }
+
+    #[inline]
+    pub fn is_gcs(&self) -> bool { id_of(&self.nid) == GCS_ID }
+
+    pub fn get_gcs_desc() -> NodeDesc {
+        NodeDesc {
+            nid: vec![GCS_ID],
+            p: PosVec::zero(),
+            v: Velocity::zero(),
+            swm: 0,
+            tsk: false,
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -71,16 +87,18 @@ pub struct NodeDetails {
     pub subswarm: u32,  // the size of the subswarm, up-flowing data
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Line {
     pub points: Vec<PosVec>,
     pub closed: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Task {
+    pub id: u32,
     pub lines: Vec<Line>,
     pub duration: Duration,
+    pub comm_point: Option<PosVec>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

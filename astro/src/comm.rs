@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use super::transceiver::Transceiver;
-use super::control::Msg as CommMsg;
+use super::control::msg::Msg as CommMsg;
 
 pub const CHANNEL: &str = "COMM";
 

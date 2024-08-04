@@ -4,10 +4,12 @@ use std::time::{Duration, Instant};
 use rand::{thread_rng, seq::SliceRandom};
 
 use astro::kinetics::PosVec;
+use astro::control::msg::Msg;
 
+use super::gcs::Gcs;
+use super::uav::Uav;
 use super::uavconf::UavConf;
 use super::uavsim::{UavSim, MsgPack};
-use super::uav::Uav;
 
 pub const SIM_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
 pub const SIM_LOOP_INTERVAL: Duration = Duration::from_millis(50);
@@ -19,10 +21,11 @@ pub const UAV_INIT_POS_INTERVAL: f32 = 5.0;  // m
 // c) collision check
 pub struct SimBed {
     uavs: Vec<Uav>,  // UAV with `id` should be placed at index `id - 1`
+    gcs: Gcs,  // ground control station
 }
 
 impl SimBed {
-    pub fn new(num_uav: u32, astro_bin: &String) -> SimBed {
+    pub fn new(num_uav: u32, astro_bin: &String, task_book: &String) -> SimBed {
         let mut init_p_vec: Vec<PosVec> = vec![];
         let row_len = (num_uav as f64).sqrt().ceil() as u32;
         for id in 0..num_uav {
@@ -42,13 +45,14 @@ impl SimBed {
         }
         SimBed {
             uavs,
+            gcs: Gcs::new(task_book),
         }
     }
 
     pub fn run_sim_loop(&mut self) {
         loop {
             let start = Instant::now();
-            self.sim_step();
+            self.sim_step(start);
             if self.uavs.iter().all(|uav| uav.is_shutdown()) {
                 // all uavs have been shutdown
                 break;
@@ -62,7 +66,7 @@ impl SimBed {
     }
 
     // TODO: ready for multi-threading acceleration
-    pub fn sim_step(&mut self) {
+    pub fn sim_step(&mut self, now: Instant) {
         let mut uav_sims: Vec<&mut UavSim> = vec![];
         for uav in &mut self.uavs {
             if let Some(uav_sim) = uav.get_uav_sim() {
@@ -74,6 +78,7 @@ impl SimBed {
         // println!("message packs: {:?}\n",
         //     msg_packs.iter().map(|p| (p.get_source_id(), p.get_num_data())).collect::<Vec<(u32, usize)>>());
         Self::dispose_message_packs(&uav_sims, &msg_packs);
+        Self::dispose_gcs_messages(&uav_sims, &self.gcs.generate_gcs_msgs(now));
         let collision_ids = Self::check_collisions_by_msg_packs(&uav_sims, &msg_packs);
         self.shutdown_uavs(collision_ids);
     }
@@ -95,7 +100,13 @@ impl SimBed {
 
     fn dispose_message_packs(sims: &Vec<&mut UavSim>, msg_packs: &Vec<MsgPack>) {
         for sim in sims {
-            sim.dispose_comm_msgs(msg_packs);
+            sim.dispose_comm_msg_packs(msg_packs);
+        }
+    }
+
+    fn dispose_gcs_messages(sims: &Vec<&mut UavSim>, gcs_msgs: &Vec<Msg>) {
+        for sim in sims {
+            sim.dispose_comm_msgs(gcs_msgs);
         }
     }
 

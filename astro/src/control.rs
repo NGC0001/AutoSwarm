@@ -4,16 +4,15 @@ use std::time::{Duration, Instant};
 use super::astroconf::AstroConf;
 use super::kinetics::{PosVec, Velocity};
 
+pub mod msg;
+
 mod collivoid;
 mod contacts;
-mod msg;
 mod nm;
 
-pub use msg::{Msg, MsgBody};
-
+use msg::{NodeDesc, Msg};
 use collivoid::ColliVoid;
 use contacts::Contacts;
-use msg::NodeDesc;
 use nm::NodeManager;
 
 pub const DEFAULT_BROADCASTING_DURATION: Duration = Duration::from_millis(150);
