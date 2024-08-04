@@ -71,7 +71,8 @@ impl SimBed {
         }
         Self::update_kinetics(&mut uav_sims);
         let msg_packs = Self::collect_message_packs(&uav_sims);
-        println!("message packs: {:?}\n", msg_packs.iter().map(|p| (p.get_source_id(), p.get_num_data())).collect::<Vec<(u32, usize)>>());
+        // println!("message packs: {:?}\n",
+        //     msg_packs.iter().map(|p| (p.get_source_id(), p.get_num_data())).collect::<Vec<(u32, usize)>>());
         Self::dispose_message_packs(&uav_sims, &msg_packs);
         let collision_ids = Self::check_collisions_by_msg_packs(&uav_sims, &msg_packs);
         self.shutdown_uavs(collision_ids);

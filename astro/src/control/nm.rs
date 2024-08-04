@@ -13,7 +13,7 @@ pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
 pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(200);
 pub const NEW_PARENT_FRESHNESS: Duration = Duration::from_millis(1000);
 pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(300);
-pub const CHILD_ADDING_RATE_LIMIT: f32 = 1.0;
+pub const CHILD_ADDING_RATE_LIMIT: f32 = 0.5;
 
 enum TaskState {
     InProgress,

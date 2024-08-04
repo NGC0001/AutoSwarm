@@ -51,6 +51,7 @@ use serde::Serialize;
 use io_rc::IoRc;
 
 pub const SEND_RETRY_INTERVAL: Duration = Duration::from_millis(20);
+pub const MAX_SEND_RETRY: u32 = 100;
 
 // channel meta field
 pub const META_CHANNEL_B: usize = 0;
@@ -90,23 +91,10 @@ impl Transceiver {
         }
     }
 
-    pub fn retrieve_raw(&mut self, channel: &str) -> Vec<String> {
-        self.do_receive().unwrap();
-        let mut msg_vec: Vec<String> = vec![];
-        if let Some(old_msg_vec) = self.msg_map.get_mut(channel) {
-            std::mem::swap(old_msg_vec, &mut msg_vec);
-        }
-        msg_vec
-    }
-
-    pub fn retrieve<T>(&mut self, channel: &str) -> Vec<T>
-    where T: DeserializeOwned,
-    {
-        let mut res: Vec<T> = vec![];
-        for msg in self.retrieve_raw(channel) {
-            res.push(serde_json::from_str(&msg).unwrap());
-        }
-        res
+    pub fn send<T>(&mut self, channel: &str, v: &T)
+    where T: Serialize {
+        let data = serde_json::to_string(v).unwrap();
+        self.send_raw(channel, &data);
     }
 
     // this function may block
@@ -126,15 +114,28 @@ impl Transceiver {
             }
         }.unwrap() {
             num_flush_try += 1;
-            println!("redo send {}", num_flush_try);
+            assert!(num_flush_try <= MAX_SEND_RETRY, "stuck at socket writer flush");
             thread::sleep(SEND_RETRY_INTERVAL);
         }
     }
 
-    pub fn send<T>(&mut self, channel: &str, v: &T)
-    where T: Serialize {
-        let data = serde_json::to_string(v).unwrap();
-        self.send_raw(channel, &data);
+    pub fn retrieve<T>(&mut self, channel: &str) -> Vec<T>
+    where T: DeserializeOwned,
+    {
+        let mut res: Vec<T> = vec![];
+        for msg in self.retrieve_raw(channel) {
+            res.push(serde_json::from_str(&msg).unwrap());
+        }
+        res
+    }
+
+    pub fn retrieve_raw(&mut self, channel: &str) -> Vec<String> {
+        self.do_receive().unwrap();
+        let mut msg_vec: Vec<String> = vec![];
+        if let Some(old_msg_vec) = self.msg_map.get_mut(channel) {
+            std::mem::swap(old_msg_vec, &mut msg_vec);
+        }
+        msg_vec
     }
 
     // buf-reading should not block (should use nonblocking io)
@@ -217,4 +218,8 @@ impl Transceiver {
         let len: usize = u32::from_le_bytes(len_bytes) as usize;
         (channel, len)
     }
+}
+
+pub fn get_socket_name(id: u32) -> String {
+    format!("socket_{:06}", id)
 }

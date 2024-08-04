@@ -3,7 +3,6 @@ pub mod control;
 pub mod gps;
 pub mod kinetics;
 pub mod transceiver;
-pub mod util;
 
 mod astro;
 mod astroconf;

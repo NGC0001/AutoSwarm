@@ -105,3 +105,13 @@ pub struct Msg {
     pub to_ids: Vec<u32>,  // target message receivers, None means broadcasting
     pub body: MsgBody,
 }
+
+impl Msg {
+    pub fn new_empty_msg(sender: NodeDesc) -> Msg {
+        Msg {
+            sender,
+            to_ids: vec![],
+            body: MsgBody::Empty,
+        }
+    }
+}

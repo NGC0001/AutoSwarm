@@ -16,28 +16,28 @@ use contacts::Contacts;
 use msg::NodeDesc;
 use nm::NodeManager;
 
-pub const DEFAULT_MAX_MSG_DURATION: Duration = Duration::from_millis(100);
+pub const DEFAULT_BROADCASTING_DURATION: Duration = Duration::from_millis(150);
 
 pub struct Control {
     conf: Rc<AstroConf>,
     contacts: Contacts,
     nm: NodeManager,
     collivoid: ColliVoid,
-    max_msg_duration: Duration,
-    last_msg_t: Instant,
+    broadcasting_duration: Duration,
+    last_broadcasting_t: Instant,
 }
 
 impl Control {
     pub fn new(conf: &Rc<AstroConf>, p: &PosVec, v: &Velocity) -> Control {
-        let max_msg_duration = DEFAULT_MAX_MSG_DURATION;
-        let last_msg_t = Instant::now() - max_msg_duration;
+        let broadcasting_duration = DEFAULT_BROADCASTING_DURATION;
+        let last_broadcasting_t = Instant::now() - broadcasting_duration;
         Control {
             conf: conf.clone(),
             contacts: Contacts::new(p, conf.msg_range),
             nm: NodeManager::new_root_node(conf, p, v),
             collivoid: ColliVoid::new(conf),
-            max_msg_duration,
-            last_msg_t,
+            broadcasting_duration,
+            last_broadcasting_t,
         }
     }
 
@@ -52,15 +52,9 @@ impl Control {
         let (next_v, mut msgs_out) = self.nm.update_node(p, v, &rm, &msgs, &neighbours);
 
         let now = Instant::now();
-        if now - self.last_msg_t >= self.max_msg_duration && msgs_out.is_empty() {
-            msgs_out.push(Msg {
-                sender: self.nm.generate_node_desc(),
-                to_ids: vec![],
-                body: MsgBody::Empty,
-            });
-        }
-        if !msgs_out.is_empty() {
-            self.last_msg_t = now;
+        if now - self.last_broadcasting_t >= self.broadcasting_duration {
+            msgs_out.push(Msg::new_empty_msg(self.nm.generate_node_desc()));
+            self.last_broadcasting_t = now;
         }
 
         let neighbours_desc: Vec<&NodeDesc> = neighbours.iter().map(|ct| &ct.desc).collect();

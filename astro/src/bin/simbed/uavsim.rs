@@ -6,6 +6,7 @@ use std::rc::Rc;
 use astro::comm;
 use astro::kinetics::{self, PosVec, Velocity, KntcMsg, distance};
 use astro::gps::{self, GpsMsg};
+use astro::control::Msg;
 use astro::transceiver::Transceiver;
 
 use super::uavconf::UavConf;
@@ -100,8 +101,12 @@ impl UavSim {
             if pack.msg_out_distance < distance(&pack.p, &self.p) {
                 continue;  // filtering out messages sent by far-awary UAVs
             }
-            for msg in &pack.data_vec {
-                self.tc.borrow_mut().send_raw(comm::CHANNEL, msg);
+            for data in &pack.data_vec {
+                let msg: Msg = serde_json::from_str(data).unwrap();
+                if !msg.to_ids.is_empty() && !msg.to_ids.contains(&self.conf.id) {
+                    continue;  // message is not for this uav
+                }
+                self.tc.borrow_mut().send_raw(comm::CHANNEL, data);
             }
         }
     }

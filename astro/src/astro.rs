@@ -10,8 +10,7 @@ use super::comm::Comm;
 use super::control::Control;
 use super::kinetics::Kinetics;
 use super::gps::Gps;
-use super::transceiver::Transceiver;
-use super::util;
+use super::transceiver::{get_socket_name, Transceiver};
 
 pub const EVENT_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(70);
 pub const EVENT_LOOP_INTERVAL: Duration = Duration::from_millis(100);
@@ -26,7 +25,7 @@ pub struct Astro {
 impl Astro {
     pub fn new(conf: AstroConf) -> Astro {
         let conf = Rc::new(conf);
-        let socket_file: String = util::get_socket_name(conf.id);
+        let socket_file: String = get_socket_name(conf.id);
         let stream = UnixStream::connect(socket_file).unwrap();
         let transceiver = Rc::new(RefCell::new(Transceiver::new(stream)));
         let p_dummy = PosVec::zero();

@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::{Child, Command};
 use std::rc::Rc;
 
-use astro::util;
+use astro::transceiver;
 
 use super::uavconf::UavConf;
 use super::uavsim::UavSim;
@@ -28,7 +28,7 @@ pub struct Uav {
 impl Uav {
     pub fn new(conf: UavConf, bin: &String) -> Uav {
         let conf = Rc::new(conf);
-        let socket_file: String = util::get_socket_name(conf.id);
+        let socket_file: String = transceiver::get_socket_name(conf.id);
         if Path::new(&socket_file).exists() {
             std::fs::remove_file(&socket_file).unwrap();
         }
