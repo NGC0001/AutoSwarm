@@ -49,7 +49,7 @@ impl Contacts {
         }
     }
 
-    // `msgs_in`: all messages received by the communication module.
+    // `msgs_in`: all messages received by the communication module, ordered by arrival time
     //
     // with these input messages, pick out those nodes that go out of contact,
     // and those nodes that go into contact.
@@ -59,24 +59,28 @@ impl Contacts {
     // `neighbours`: all nodes currently in contact
     // `add`: nodes newly into contact
     // `rm`: nodes newly out of contact
-    // `msgs`: messages sent by nodes in contact
+    // `msgs`: messages sent by nodes in contact, and by ground control station
     //
     // returned `add` and `rm` should not overlap.
     pub fn update<'a>(&mut self, p_self: &PosVec, msgs_in: &'a Vec<Msg>)
     -> (Vec<&Contact>, Vec<&'a Nid>, Vec<u32>, Vec<&'a Msg>) {
         self.p_self = *p_self;
-        // m_map stores the newest message (with fresh position and sid) from a uav
+        // m_map stores the newest message (with fresh position and nid) from a uav
         let mut m_map: HashMap<u32, &'a Msg> = HashMap::new();
+        let mut msgs: Vec<&Msg> = vec![];
         for msg in msgs_in {
-            let from_id: u32 = id_of(&msg.sender.nid);
-            m_map.entry(from_id)
+            if msg.sender.is_gcs() {  // ground control station is not an uav
+                msgs.push(msg);
+                continue;
+            }
+            m_map.entry(msg.sender.get_id())
                 .and_modify(|m| { *m = msg; })
                 .or_insert(msg);
         }
         let now = Instant::now();
         let (add, mut rm) = self.update_by_msg_positions(now, &m_map);
         rm.append(&mut self.filter_out_lost_contacts(now));  // should contain no duplicate ids
-        let msgs = self.pick_messages_in_range(msgs_in);
+        msgs.append(&mut self.pick_messages_in_range(msgs_in));
         let neighbours = self.get_contacts();
         (neighbours, add, rm, msgs)
     }
@@ -133,8 +137,7 @@ impl Contacts {
     fn pick_messages_in_range<'a>(&self, msgs: &'a Vec<Msg>) -> Vec<&'a Msg> {
         let mut msg_in_range: Vec<&Msg> = vec![];
         for msg in msgs {
-            let from_id: u32 = id_of(&msg.sender.nid);
-            match self.contacts_in_range.get(&from_id) {
+            match self.contacts_in_range.get(&msg.sender.get_id()) {
                 None => (),
                 Some(_) => {
                     msg_in_range.push(msg);

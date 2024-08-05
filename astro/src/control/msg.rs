@@ -48,7 +48,7 @@ pub struct NodeDesc {
     pub p: PosVec,
     pub v: Velocity,
     pub swm: u32,  // the size of the swarm, down-flowing data
-    pub tsk: bool,  // whether the node has a task, down-flowing data
+    pub tsk: Option<u32>,  // what task the node has, up/down-flowing data
 }
 
 impl NodeDesc {
@@ -70,6 +70,23 @@ impl NodeDesc {
     }
 
     #[inline]
+    pub fn is_free(&self) -> bool { !self.has_task() }
+
+    pub fn has_task(&self) -> bool {
+        match self.tsk {
+            Some(_) => true,
+            None => false,
+        }
+    }
+
+    pub fn has_task_of_id(&self, id: u32) -> bool {
+        match self.tsk {
+            Some(tid) => tid == id,
+            None => false,
+        }
+    }
+
+    #[inline]
     pub fn is_gcs(&self) -> bool { id_of(&self.nid) == GCS_ID }
 
     pub fn get_gcs_desc() -> NodeDesc {
@@ -78,7 +95,7 @@ impl NodeDesc {
             p: PosVec::zero(),
             v: Velocity::zero(),
             swm: 0,
-            tsk: false,
+            tsk: None,
         }
     }
 }
@@ -86,13 +103,18 @@ impl NodeDesc {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct NodeDetails {
     pub subswarm: u32,  // the size of the subswarm, up-flowing data
-    pub fixed: bool,  // whether the subswarm is fixed (no join, no leave), up-flowing data
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct JoinAppl {
     pub dtl: NodeDetails,
     pub src_tree: u32,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct AssignChildAppl {
+    pub cid: u32,
+    pub dtl: NodeDetails,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -138,10 +160,10 @@ pub enum MsgBody {
     Join(JoinAppl),  // sender wants to set the receiver as its parent
     Accept,  // sender rejects the receiver as its child
     Reject,  // sender accepts the receiver as its child
-
     Leave,  // sender stops recognising the receiver as its parent
 
-    ChangeParent(u32),  // sender sets a third node as the receiver's new parent
+    ChangeParent(u32),  // sender sets a third node (on same tree) as the receiver's new parent
+    AssignChild(AssignChildAppl),  // sender sets a third node (on same tree) as the receiver's new child
 
     Task(Task),
 }

@@ -7,7 +7,8 @@ use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
 use super::contacts::Contact;
 use super::msg::{id_of, is_id_valid_descendant_of, parent_id_of, root_id_of, Nid};
-use super::msg::{NodeDesc, NodeDetails, JoinAppl, Task, MsgBody, Msg};
+use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, MsgBody, Msg};
+use super::tm::TaskManager;
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
 pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(200);
@@ -25,8 +26,7 @@ enum TaskState {
 // but need to ensure the coherence of the whole swarm.
 enum NodeState {
     Free,
-    TaskReceived,
-    TaskExcecuting(TaskState),
+    InTask(u32, TaskState),
 }
 
 struct Node {
@@ -41,14 +41,16 @@ impl Node {
 }
 
 pub struct NodeManager {
+    conf: Rc<AstroConf>,
     now: Instant,
     child_adding_rate: f32,
     p: PosVec,
     v: Velocity,
 
-    conf: Rc<AstroConf>,
     nid: Nid,
     state: NodeState,
+    tm: TaskManager,
+
     parent: Option<Node>,  // need backup ids (indirect upper nodes / sibling nodes)
     children: Vec<Node>,
     node_lost_duration: Duration,
@@ -60,14 +62,16 @@ impl NodeManager {
     pub fn new_root_node(conf: &Rc<AstroConf>, p: &PosVec, v: &Velocity) -> NodeManager {
         let now = Instant::now();
         NodeManager {
+            conf: conf.clone(),
             now,
             child_adding_rate: 0.0,
             p: *p,
             v: *v,
 
-            conf: conf.clone(),
             nid: vec![conf.id],
             state: NodeState::Free,
+            tm: TaskManager::new(),
+
             parent: None,
             children: vec![],
             node_lost_duration: DEFAULT_NODE_LOST_DURATION,
@@ -116,19 +120,37 @@ impl NodeManager {
         self.children.iter().any(|cnd| cnd.get_id() == id_other)
     }
 
-    pub fn is_free(&self) -> bool {
+    #[inline]
+    pub fn is_free(&self) -> bool { !self.has_task() }
+
+    pub fn has_task(&self) -> bool {
         match self.state {
-            NodeState::Free => true,
-            _ => false,
+            NodeState::InTask(..) => true,
+            NodeState::Free => false,
         }
     }
 
-    pub fn has_task(&self) -> bool {
-        !self.is_free()
+    pub fn has_task_of_id(&self, id: u32) -> bool {
+        match self.state {
+            NodeState::InTask(tid, _) => tid == id,
+            NodeState::Free => false,
+        }
     }
 
-    pub fn is_subswarm_fixed(&self) -> bool {
-        self.has_task() && self.children.iter().all(|cnd| cnd.details.fixed)
+    pub fn get_task_id(&self) -> Option<u32> {
+        match self.state {
+            NodeState::InTask(tid, _) => Some(tid),
+            NodeState::Free => None,
+        }
+    }
+
+    pub fn is_subswarm_in_task(&self) -> bool {
+        match self.state {
+            NodeState::InTask(tid, _) => {
+                self.children.iter().all(|cnd| cnd.desc.has_task_of_id(tid))
+            },
+            NodeState::Free => false,
+        }
     }
 
     pub fn get_subswarm_size(&self) -> u32 {
@@ -152,14 +174,13 @@ impl NodeManager {
             p: self.p,
             v: self.v,
             swm: self.get_swarm_size(),
-            tsk: self.has_task(),
+            tsk: self.get_task_id(),
         }
     }
 
     pub fn generate_node_details(&self) -> NodeDetails {
         NodeDetails {
             subswarm: self.get_subswarm_size(),
-            fixed: self.is_subswarm_fixed(),
         }
     }
 
@@ -208,12 +229,12 @@ impl NodeManager {
             MsgBody::Join(appl) => msg_out.push(self.add_child_or_reject(desc_sdr, appl)),
             MsgBody::Accept => (),
             MsgBody::Reject => self.remove_parent_of_id(desc_sdr.get_id()),
-
             MsgBody::Leave => self.remove_child_of_id(desc_sdr.get_id()),
 
-            MsgBody::ChangeParent(pid_new) => msg_out.append(&mut self.change_parent(*pid_new, neighbours)),
+            MsgBody::ChangeParent(pid_new) => self.change_parent(*pid_new, neighbours),
+            MsgBody::AssignChild(appl) => self.add_assigned_child(appl, neighbours),
 
-            MsgBody::Task(t) => msg_out.append(&mut self.process_task_msg(desc_sdr, t)),
+            MsgBody::Task(task) => msg_out.append(&mut self.relay_or_accept_task(task)),
         }
         msg_out
     }
@@ -234,7 +255,7 @@ impl NodeManager {
 
     fn explore_neighbourhood(&mut self, neighbours: &Vec<&Contact>) -> Vec<Msg> {
         let mut msg_out: Vec<Msg> = vec![];
-        if let NodeState::Free = self.state {
+        if self.is_free() {
             msg_out.append(&mut self.try_join_other_swarm(neighbours));
         }
         msg_out
@@ -273,7 +294,7 @@ impl NodeManager {
         let mut candidates: Vec<&NodeDesc> = neighbours.iter().filter(
             |t| self.now - t.last_heard < NEW_PARENT_FRESHNESS  // freshness of candidate
         ).map(|t| &t.desc).filter(
-            |nd| !nd.tsk && nd.get_root_id() != root_id_self  // no task, in different swarm
+            |nd| nd.is_free() && nd.get_root_id() != root_id_self  // no task, in different swarm
         ).collect();
         candidates.push(&desc_self);
         candidates.sort_unstable_by(|desc1, desc2| {
@@ -366,36 +387,24 @@ impl NodeManager {
     fn update_child_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails) {
         let id = self.get_id();
         let id_other = desc.get_id();
-        for cnd in &mut self.children {
-            let cid = cnd.get_id();
-            if cid == id_other {
-                // the description is from a recognised child
-                if is_id_valid_descendant_of(id_other, &self.nid)
-                    && desc.get_parent_id().is_some_and(|v| v == id) {
-                    // valid child,
-                    // and the child recognised this node as its parent.
-                    cnd.desc = desc.clone();
-                    cnd.details = dtl.clone();
-                    cnd.last_heard = self.now;
-                }  // otherwise, just wait the child to timeout and be removed
-                return;
-            }
+        if let Some(cnd) = self.children.iter_mut().find(|cnd| cnd.get_id() == id_other) {
+            // the description is from a recognised child
+            if is_id_valid_descendant_of(id_other, &self.nid)
+                && desc.get_parent_id().is_some_and(|v| v == id) {
+                // valid child,
+                // and the child recognised this node as its parent.
+                cnd.desc = desc.clone();
+                cnd.details = dtl.clone();
+                cnd.last_heard = self.now;
+            }  // otherwise, just wait the child to timeout and be removed
         }
     }
 
+    // deal with Join, but not with ChangeParent/AssignChild
     fn add_child_or_reject(&mut self, desc: &NodeDesc, appl: &JoinAppl) -> Msg {
         let id_other = desc.get_id();
-        let mut accept = false;
-        if self.is_valid_ancestor_of(id_other) {
-            if self.get_root_id() == appl.src_tree {
-                // application triggered by ChangeParent within same tree
-                // TODO: consider sending AddChild to new parent, instead of letting child send Join to its new parent
-                accept = true;
-            }
-            if self.is_free() && self.child_adding_rate < CHILD_ADDING_RATE_LIMIT {
-                accept = true;
-            }
-        }
+        let accept = self.is_valid_ancestor_of(id_other) && self.get_root_id() != appl.src_tree
+            && self.is_free() && self.child_adding_rate < CHILD_ADDING_RATE_LIMIT;
         if accept && !self.has_child_of_id(id_other) {
             self.children.push(Node {
                 desc: desc.clone(),
@@ -412,45 +421,56 @@ impl NodeManager {
         }
     }
 
-    fn change_parent(&mut self, pid_new: u32, neighbours: &Vec<&Contact>) -> Vec<Msg> {
-        let mut out: Vec<Msg> = vec![];
+    fn change_parent(&mut self, pid_new: u32, neighbours: &Vec<&Contact>) {
         let mut changed: bool = false;
         if let Some(t) = neighbours.iter().find(|t| t.desc.get_id() == pid_new) {
-            let src_tree: u32 = self.get_root_id();
-            if self.set_parent(&t.desc) {
-                changed = true;
-                out.push(Msg {
-                    sender: self.generate_node_desc(),
-                    to_ids: vec![pid_new],
-                    body: MsgBody::Join(JoinAppl {
-                        dtl: self.generate_node_details(),
-                        src_tree,
-                    }),
-                });
-            }
+            changed = self.set_parent(&t.desc);
         }
         if !changed {
-            self.remove_parent();
-        }
-        out
-    }
-
-    fn process_task_msg(&mut self, desc: &NodeDesc, task: &Task) -> Vec<Msg> {
-        if desc.is_gcs() && !self.is_root_node() {
-            // relay this ground station task message to parent node
-            vec![Msg {
-                sender: desc.clone(),
-                to_ids: vec![self.get_parent_id().unwrap()],
-                body: MsgBody::Task(task.clone()),
-            }]
-        } else {
-            self.process_task(task)
+            self.remove_parent();  // node detached from current swarm tree
         }
     }
 
-    fn process_task(&mut self, task: &Task) -> Vec<Msg> {
-        self.state = NodeState::TaskReceived;
-        vec![]  // TODO: send messages to all children
+    fn add_assigned_child(&mut self, appl: &AssignChildAppl, neighbours: &Vec<&Contact>) {
+        let mut added: bool = false;
+        if let Some(t) = neighbours.iter().find(|t| t.desc.get_id() == appl.cid) {
+            if self.is_valid_ancestor_of(appl.cid) && self.get_root_id() == t.desc.get_root_id()
+                && self.has_task() && t.desc.has_task_of_id(self.get_task_id().unwrap())
+                && !self.has_child_of_id(appl.cid) {
+                self.children.push(Node {
+                    desc: t.desc.clone(),
+                    details: appl.dtl.clone(),
+                    last_heard: self.now,
+                });
+                added = true;
+                println!("assigned connection: {:?} <- {}", &self.nid, appl.cid);
+            }
+        }
+        if !added {
+            self.fail_task();
+        }
+    }
+
+    fn relay_or_accept_task(&mut self, task: &Task) -> Vec<Msg> {
+        let mut msgs_out: Vec<Msg> = vec![];
+        match self.get_parent_id() {
+            Some(pid) => {  // relay task to parent node
+                msgs_out.push(Msg {
+                    sender: self.generate_node_desc(),
+                    to_ids: vec![pid],
+                    body: MsgBody::Task(task.clone()),
+                });
+            },
+            None => {  // root node, receive this task
+                if self.is_free() {
+                    self.tm.set_task(task);
+                    self.state = NodeState::InTask(task.id, TaskState::InProgress);
+                } else {
+                    println!("task {} rejected", task.id);
+                }
+            }
+        }
+        msgs_out
     }
 
     fn set_parent(&mut self, desc: &NodeDesc) -> bool {
@@ -461,7 +481,6 @@ impl NodeManager {
                 desc: desc.clone(),
                 details: NodeDetails {
                     subswarm: 0,  // value here should not matter
-                    fixed: false,  // value here should not matter
                 },
                 last_heard: self.now,
             });
@@ -478,34 +497,42 @@ impl NodeManager {
 
     fn remove_parent(&mut self) {
         self.parent = None;
-        self.on_parent_info_updated();
+        self.nid = vec![self.get_id()];
+        self.state = NodeState::Free;
     }
 
     fn on_parent_info_updated(&mut self) {
         let id = self.get_id();
-        match &self.parent {
-            None => {
-                self.nid = vec![id];
-                self.state = NodeState::Free;
-            },
-            Some(pnd) => {
-                self.nid = pnd.desc.nid.clone();
-                self.nid.push(id);
-                if !pnd.desc.tsk {
-                    self.state = NodeState::Free;
+        let pnd = self.parent.as_ref().unwrap();
+        self.nid = pnd.desc.nid.clone();
+        self.nid.push(id);
+        match pnd.desc.tsk {
+            None => { self.state = NodeState::Free; },
+            Some(tid) => {
+                if !self.has_task_of_id(tid) {
+                    self.state = NodeState::InTask(tid, TaskState::InProgress);
                 }
             },
         };
     }
 
+    // TODO: do not change state if it's rearranging child within same tree
     fn remove_child_of_id(&mut self, cid: u32) {
         if let Some(idx) = self.children.iter().position(|cnd| cnd.get_id() == cid) {
             let cnd = self.children.remove(idx);
             println!("delete connection: {:?} <-x {}", &self.nid, cnd.get_id());
-            // TODO: do not change state if it's rearranging child within same tree
-            if self.is_subswarm_fixed() && cnd.details.fixed {
-                self.state = NodeState::TaskExcecuting(TaskState::Failed);
+            if self.is_subswarm_in_task() && cnd.desc.has_task_of_id(self.get_task_id().unwrap()) {
+                self.fail_task();
             }
         }
+    }
+
+    fn fail_task(&mut self) {
+        match &mut self.state {
+            NodeState::Free => (),
+            NodeState::InTask(_, ts) => {
+                *ts = TaskState::Failed;
+            },
+        };
     }
 }

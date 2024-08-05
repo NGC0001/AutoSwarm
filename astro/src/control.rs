@@ -9,7 +9,7 @@ pub mod msg;
 mod collivoid;
 mod contacts;
 mod nm;
-mod taskalloc;
+mod tm;
 
 use msg::{NodeDesc, Msg};
 use collivoid::ColliVoid;
