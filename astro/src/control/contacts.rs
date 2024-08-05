@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use super::super::kinetics::{PosVec, distance};
-use super::msg::{id_of, Msg, Nid, NodeDesc};
+use super::msg::{Msg, Nid, NodeDesc};
 
 pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
 pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.95;

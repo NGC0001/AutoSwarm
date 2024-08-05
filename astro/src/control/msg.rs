@@ -64,6 +64,10 @@ impl NodeDesc {
     #[inline]
     pub fn get_parent_id(&self) -> Option<u32> { parent_id_of(&self.nid) }
 
+    pub fn has_parent_of_id(&self, id: u32) -> bool {
+        self.get_parent_id().is_some_and(|v| v == id)
+    }
+
     #[inline]
     pub fn is_valid_ancestor_of(&self, id: u32) -> bool {
         is_id_valid_descendant_of(id, &self.nid)
@@ -100,11 +104,6 @@ impl NodeDesc {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
-pub struct NodeDetails {
-    pub subswarm: u32,  // the size of the subswarm, up-flowing data
-}
-
 #[derive(Deserialize, Serialize, Debug)]
 pub struct JoinAppl {
     pub dtl: NodeDetails,
@@ -120,7 +119,8 @@ pub struct AssignChildAppl {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Line {
     pub points: Vec<PosVec>,
-    pub closed: bool,
+    pub start: bool,
+    pub end: bool,
 }
 
 impl Line {
@@ -129,9 +129,6 @@ impl Line {
         let mut len: f32 = 0.0;
         for i in 1..self.points.len() {
             len += distance(&self.points[i], &self.points[i - 1]);
-        }
-        if self.closed {
-            len += distance(&self.points.last().unwrap(), &self.points.first().unwrap())
         }
         len
     }
@@ -150,6 +147,19 @@ impl Task {
         assert!(!self.lines.is_empty());
         self.lines.iter().map(|l| l.calc_length()).sum()
     }
+}
+
+#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+pub enum TaskState {
+    InProgress,
+    Success,
+    Failure,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct NodeDetails {
+    pub subswarm: u32,  // the size of the subswarm, up-flowing data
+    pub taskstate: Option<TaskState>,  // the task state of the subswarm, up-flowing data
 }
 
 #[derive(Deserialize, Serialize, Debug)]
