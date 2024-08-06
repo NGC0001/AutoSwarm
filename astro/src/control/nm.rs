@@ -272,10 +272,17 @@ impl NodeManager {
     }
 
     fn manage_node_state(&mut self) {
-        // child nodes generally follow the state of their parent,
-        // but they themselves decide whether their subtask is success/failure.
+        // child nodes generally follow the state of their parent node,
+        // but they themselves decide whether to go into success/failure.
         match self.state {
-            NodeState::InTask(tid, TaskState::InProgress | TaskState::Success) => self.advance_task(tid),
+            NodeState::InTask(tid, TaskState::InProgress | TaskState::Success) => {
+                if self.children.iter().any(|cnd| cnd.details.is_subswm_failure_in_tsk(tid)) {
+                    self.switch_state_to_in_task(tid, TaskState::Failure);
+                } else if self.all_child_subswarms_alignment_done_for_task(tid) {
+                    // only after subswarm aligned (which means accurate subswarm size), can the top node divide task.
+                    self.advance_task(tid);
+                }
+            },
             _ => (),  // success may change, but failure won't
         }
 
@@ -287,7 +294,7 @@ impl NodeManager {
     fn generate_task_related_msgs(&mut self) -> Vec<Msg> {
         if let NodeState::InTask(tid, TaskState::InProgress) = self.state {
             match self.tm.get_current_task() {
-                Some(te) if te.is_task_divided() => {  // "task divided" indicates subswarm aligned
+                Some(td) if td.is_task_divided() => {  // "task divided" indicates subswarm aligned
                     self.children.iter().filter(|cnd|
                         cnd.details.is_subswm_alignment_done_for_tsk(tid)  // this alignment condition is redundant
                         && !cnd.details.is_subswm_allocation_done_for_tsk(tid)
@@ -296,7 +303,7 @@ impl NodeManager {
                         Msg {
                             sender: self.generate_node_desc(),
                             to_ids: vec![cid],
-                            body: MsgBody::Subtask(te.get_divided_subtask(cid).unwrap().clone()),
+                            body: MsgBody::Subtask(td.get_child_subtask(cid).unwrap().clone()),
                         }
                     }).collect::<Vec<Msg>>()
                 },
@@ -307,30 +314,30 @@ impl NodeManager {
         }
     }
 
+    // this function should be called only after subswarm aligned.
+    // for root node of swarm, "task allocated (by gcs)" does not ensures swarm aligned.
+    // for other nodes, "subtask allocated (by parent)" happens after subswarm aligned.
     fn advance_task(&mut self, tid: u32) {
-        if self.children.iter().any(|cnd| cnd.details.is_subswm_failure_in_tsk(tid)) {
-            self.switch_state_to_in_task(tid, TaskState::Failure);
-            return;
-        }
-        if !self.all_child_subswarms_alignment_done_for_task(tid) {
-            // only after subswarm aligned (which means accurate subswarm size), can the top node divide task.
-            // for root node of swarm, "task allocated (by gcs)" does not ensures swarm aligned.
-            // for other nodes, "subtask allocated (by parent)" happens after subswarm aligned.
-            return;
-        }
+        let children = &self.children;
         match self.tm.get_current_task_mut() {
             None => (),  // subtask not allocated by parent yet
-            Some(te) => {  // subtask allocated, for non-root node, also means subswarm aligned.
-                assert!(tid == te.get_tid());
-                if !te.is_task_divided() {
-                    te.divide_task();
+            Some(td) => {  // subtask allocated, for non-root node, also means subswarm aligned
+                assert!(tid == td.get_tid());
+                if !td.is_task_divided() {
+                    let children_info = children.iter().map(
+                        |cnd| (cnd.get_id(), cnd.details.subswarm)
+                    ).collect::<Vec<(u32, u32)>>();
+                    td.divide_task();
                 }
-                te.execute();
-                if te.is_task_failure() {
-                    self.switch_state_to_in_task(tid, TaskState::Failure);
-                } else if te.is_task_success()
-                    && self.children.iter().all(|cnd| cnd.details.is_subswm_success_in_tsk(tid)) {
-                    self.switch_state_to_in_task(tid, TaskState::Success);
+                let te = td.get_own_subtask_mut().unwrap();
+                match te.execute(&self.p) {
+                    Some(false) => self.switch_state_to_in_task(tid, TaskState::Failure),  // execution failure
+                    Some(true) => {  // execution success
+                        if self.children.iter().all(|cnd| cnd.details.is_subswm_success_in_tsk(tid)) {
+                            self.switch_state_to_in_task(tid, TaskState::Success);
+                        }
+                    },
+                    None => (),  // execution in progress
                 }
             },
         };
@@ -617,7 +624,8 @@ impl NodeManager {
         }
     }
 
-    // TODO: do not change node state if the removal is due to rearranging child to another node within same tree
+    // do not use this function when rearrange child to another node within same tree.
+    // as when rearranging child, the removal of a child shall not cause task to fail.
     fn remove_child_of_id(&mut self, cid: u32) {
         if let Some(idx) = self.children.iter().position(|cnd| cnd.get_id() == cid) {
             let cnd = self.children.remove(idx);
