@@ -11,7 +11,7 @@ use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, Subswar
 use super::tm::TaskManager;
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
-pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(200);
+pub const DEFAULT_STATE_MSG_DURATION: Duration = Duration::from_millis(100);
 pub const NEW_PARENT_FRESHNESS: Duration = Duration::from_millis(1000);
 pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(300);
 pub const CHILD_ADDING_RATE_LIMIT: f32 = 0.5;
@@ -61,8 +61,8 @@ pub struct NodeManager {
     parent: Option<Node>,  // need backup ids (indirect upper nodes / sibling nodes)
     children: Vec<Node>,
     node_lost_duration: Duration,
-    conn_msg_duration: Duration,
-    last_conn_msg_t: Instant,
+    state_msg_duration: Duration,
+    last_state_msg_t: Instant,
 }
 
 impl NodeManager {
@@ -82,8 +82,8 @@ impl NodeManager {
             parent: None,
             children: vec![],
             node_lost_duration: DEFAULT_NODE_LOST_DURATION,
-            conn_msg_duration: DEFAULT_CONNECTION_MSG_DURATION,
-            last_conn_msg_t: now,
+            state_msg_duration: DEFAULT_STATE_MSG_DURATION,
+            last_state_msg_t: now,
         }
     }
 
@@ -151,8 +151,8 @@ impl NodeManager {
         }
     }
 
-    pub fn all_child_subswarms_in_task(&self, tid: u32) -> bool {
-        self.children.iter().all(|cnd| cnd.details.is_subswm_in_tsk(tid))
+    pub fn all_child_subswarms_alignment_done_for_task(&self, tid: u32) -> bool {
+        self.children.iter().all(|cnd| cnd.details.is_subswm_alignment_done_for_tsk(tid))
     }
 
     pub fn get_subswarm_task_state(&self) -> SubswarmTaskState {
@@ -161,7 +161,7 @@ impl NodeManager {
             NodeState::InTask(tid, TaskState::Success) => SubswarmTaskState::Succ(tid),
             NodeState::InTask(tid, TaskState::Failure) => SubswarmTaskState::Fail(tid),
             NodeState::InTask(tid, TaskState::InProgress) => {
-                if self.all_child_subswarms_in_task(tid) {
+                if self.all_child_subswarms_alignment_done_for_task(tid) {
                     match self.tm.get_current_task() {
                         Some(_) => SubswarmTaskState::Allc(tid),
                         None => SubswarmTaskState::Algn(tid),
@@ -209,8 +209,10 @@ impl NodeManager {
         self.child_adding_rate *= (-(self.now - previous).as_secs_f32() / CHILD_ADDING_TIMESCALE.as_secs_f32()).exp();
         self.p = *p;
         self.v = *v;
+
         // messages may be lost, so in most cases they should carry state, rather than carry events.
         // if an event message is not received by all parties involved, its (partial) effect should be revocable.
+        // currently this is not achieved.
         let mut msgs_out: Vec<Msg> = vec![];
 
         self.remove_no_contact_nodes(rm);  // contact-losing events
@@ -219,9 +221,9 @@ impl NodeManager {
         }
         self.remove_no_connection_nodes();  // connection-losing events
 
-        msgs_out.append(&mut self.manage_node_state(neighbours));
+        self.manage_node_state();
+        self.maybe_generate_node_state_msg(neighbours, &mut msgs_out);
 
-        self.maybe_generate_connection_msg(&mut msgs_out);
         (self.calc_next_v(), msgs_out)
     }
 
@@ -250,6 +252,7 @@ impl NodeManager {
             MsgBody::AssignChild(appl) => self.add_assigned_child(appl, neighbours),
 
             MsgBody::Task(task) => msg_out.append(&mut self.relay_or_accept_task(task)),
+            MsgBody::Subtask(subtask) => self.allocate_subtask(subtask),
         }
         msg_out
     }
@@ -268,46 +271,69 @@ impl NodeManager {
         }
     }
 
-    fn manage_node_state(&mut self, neighbours: &Vec<&Contact>) -> Vec<Msg> {
+    fn manage_node_state(&mut self) {
         // child nodes generally follow the state of their parent,
         // but they themselves decide whether their subtask is success/failure.
         match self.state {
-            NodeState::InTask(_, TaskState::InProgress) => self.update_task(),
-            NodeState::InTask(_, TaskState::Success) => self.update_task(),
+            NodeState::InTask(tid, TaskState::InProgress | TaskState::Success) => self.advance_task(tid),
             _ => (),  // success may change, but failure won't
         }
 
         if self.is_root_node() {
             self.manage_root_node_state();  // manages the overall state of the whole swarm
         }
+    }
 
-        if self.is_free() {
-            self.try_join_other_swarm(neighbours)
+    fn generate_task_related_msgs(&mut self) -> Vec<Msg> {
+        if let NodeState::InTask(tid, TaskState::InProgress) = self.state {
+            match self.tm.get_current_task() {
+                Some(te) if te.is_task_divided() => {  // "task divided" indicates subswarm aligned
+                    self.children.iter().filter(|cnd|
+                        cnd.details.is_subswm_alignment_done_for_tsk(tid)  // this alignment condition is redundant
+                        && !cnd.details.is_subswm_allocation_done_for_tsk(tid)
+                    ).map(|cnd| {
+                        let cid = cnd.get_id();
+                        Msg {
+                            sender: self.generate_node_desc(),
+                            to_ids: vec![cid],
+                            body: MsgBody::Subtask(te.get_divided_subtask(cid).unwrap().clone()),
+                        }
+                    }).collect::<Vec<Msg>>()
+                },
+                _ => vec![],
+            }
         } else {
-            self.generate_task_msgs()
+            vec![]
         }
     }
 
-    fn update_task(&mut self) {
-        match self.tm.get_current_task() {
-            None => (),  // subtask not received yet
-            Some(te) => {
-                let tid = te.tid();
-                assert!(self.has_task_of_id(tid));
-                if self.all_child_subswarms_in_task(tid) {
-                    // for root node of swarm, "current task set" does not mean swarm aligned
-                    self.tm.execute_task();
+    fn advance_task(&mut self, tid: u32) {
+        if self.children.iter().any(|cnd| cnd.details.is_subswm_failure_in_tsk(tid)) {
+            self.switch_state_to_in_task(tid, TaskState::Failure);
+            return;
+        }
+        if !self.all_child_subswarms_alignment_done_for_task(tid) {
+            // only after subswarm aligned (which means accurate subswarm size), can the top node divide task.
+            // for root node of swarm, "task allocated (by gcs)" does not ensures swarm aligned.
+            // for other nodes, "subtask allocated (by parent)" happens after subswarm aligned.
+            return;
+        }
+        match self.tm.get_current_task_mut() {
+            None => (),  // subtask not allocated by parent yet
+            Some(te) => {  // subtask allocated, for non-root node, also means subswarm aligned.
+                assert!(tid == te.get_tid());
+                if !te.is_task_divided() {
+                    te.divide_task();
                 }
-                if self.tm.is_task_failure()
-                    || self.children.iter().any(|cnd| cnd.details.is_subswm_failure_on_tsk(tid)) {
+                te.execute();
+                if te.is_task_failure() {
                     self.switch_state_to_in_task(tid, TaskState::Failure);
-                }
-                if self.tm.is_task_success()
-                    && self.children.iter().all(|cnd| cnd.details.is_subswm_success_on_tsk(tid)) {
+                } else if te.is_task_success()
+                    && self.children.iter().all(|cnd| cnd.details.is_subswm_success_in_tsk(tid)) {
                     self.switch_state_to_in_task(tid, TaskState::Success);
                 }
             },
-        }
+        };
     }
 
     // this function is only run by root node
@@ -329,6 +355,23 @@ impl NodeManager {
             None => {  // swarm from task/free to free
                 self.switch_state_to_free();
             },
+        }
+    }
+
+    fn maybe_generate_node_state_msg(&mut self, neighbours: &Vec<&Contact>, msgs_out: &mut Vec<Msg>) {
+        // state messages should be sent periodically (not too frequently), or immediately after node status changes.
+        // however currently node status changes cannot be detected.
+        // as a makeshift, check whether `msgs_out` isn't empty.
+        if self.now - self.last_state_msg_t > self.state_msg_duration {  // limit frequency
+            if self.is_free() {
+                msgs_out.append(&mut self.try_join_other_swarm(neighbours));
+            } else {
+                msgs_out.append(&mut self.generate_task_related_msgs());
+            }
+            if self.has_connections() {
+                msgs_out.push(self.generate_connection_msg());
+            }
+            self.last_state_msg_t = self.now;
         }
     }
 
@@ -387,18 +430,6 @@ impl NodeManager {
         }
     }
 
-    fn maybe_generate_connection_msg(&mut self, msgs_out: &mut Vec<Msg>) {
-        // TODO:
-        // connection message should be sent periodically, or immediately if node status changes.
-        // however currently node status changes cannot be detected.
-        // instead, check whether `msgs_out` isn't empty, which indicates potential status change.
-        if self.has_connections() && (
-            !msgs_out.is_empty() || self.now - self.last_conn_msg_t > self.conn_msg_duration) {
-            msgs_out.push(self.generate_connection_msg());
-            self.last_conn_msg_t = self.now;
-        }
-    }
-
     fn generate_connection_msg(&self) -> Msg {
         let mut to_ids: Vec<u32> = self.children.iter().map(|cnd| cnd.get_id()).collect();
         if let Some(pnd) = &self.parent {
@@ -412,14 +443,14 @@ impl NodeManager {
         }
     }
 
-    fn calc_next_v(&self) -> Velocity {
+    fn calc_next_v(&self) -> Velocity {  // TODO: calculate task related velocity
         match &self.parent {
             None => Velocity::zero(),
             Some(pn) => {
                 // TODO: this is a bad algorithm.
                 let s = &pn.desc.p - &self.p;
                 let dist: f32 = s.norm();
-                if dist < self.conf.msg_range / 2.0 {
+                if dist < self.conf.msg_range / 3.0 {
                     Velocity::zero()
                 } else {
                     let factor: f32 = (self.conf.max_v / 2.0) / dist;
@@ -517,6 +548,12 @@ impl NodeManager {
         }
     }
 
+    fn allocate_subtask(&mut self, subtask: &Task) {
+        if self.has_task_of_id(subtask.id) && self.tm.get_current_task().is_none() {
+            self.tm.set_current_task(subtask.clone());
+        }
+    }
+
     fn set_parent(&mut self, desc: &NodeDesc) -> bool {
         if !self.is_valid_descendant_of(desc) {
             false
@@ -580,7 +617,7 @@ impl NodeManager {
         }
     }
 
-    // TODO: do not change state if it's rearranging child within same tree
+    // TODO: do not change node state if the removal is due to rearranging child to another node within same tree
     fn remove_child_of_id(&mut self, cid: u32) {
         if let Some(idx) = self.children.iter().position(|cnd| cnd.get_id() == cid) {
             let cnd = self.children.remove(idx);

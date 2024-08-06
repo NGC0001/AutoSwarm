@@ -149,11 +149,13 @@ impl Task {
     }
 }
 
-// Algn, Allc, Succ, Fail are considered "in task".
 // usual transitions: None -> Recv -> Algn -> Allc -> Succ -> None.
 // other transitions: Recv/Algn/Allc/Succ -> Fail -> None,
 //                    Succ -> Allc,
-//                    Recv -> Allc (root node).
+//                    Recv -> Allc (root node only)
+// for root node, reception of a gcs task message means task allocated to root node,
+// but the alignment not done yet, so the swarm is in Recv,
+// after alignment done, the swarm changes to Allc, skipping Algn.
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum SubswarmTaskState {
     None,  // none has received task id,
@@ -164,7 +166,7 @@ pub enum SubswarmTaskState {
                 // in this case, the top node is in NodeState:::InTask(id, TaskState::InProgress).
 
     Algn(u32),  // all nodes of subswarm have received task id (aligned) and are in NodeState::InTask(id, ..),
-                // none has failed, all have not succeeded, and the top node has not been allocated subtask.
+                // none has failed, all have not succeeded, and the top node has not been allocated a subtask.
                 // in this case, the top node is in NodeState::InTask(id, TaskState::InProgress).
 
     Allc(u32),  // all nodes of subswarm have received task id and are in NodeState::InTask(id, ..),
@@ -187,25 +189,34 @@ pub struct NodeDetails {
 }
 
 impl NodeDetails {
-    pub fn is_subswm_in_tsk(&self, tid: u32) -> bool {
+    pub fn is_subswm_alignment_done_for_tsk(&self, tid: u32) -> bool {
         match self.subswm_tsk {
-            SubswarmTaskState::None => false,
-            SubswarmTaskState::Recv(_) => false,
-            SubswarmTaskState::Algn(id) => id == tid,
-            SubswarmTaskState::Allc(id) => id == tid,
-            SubswarmTaskState::Succ(id) => id == tid,
+            SubswarmTaskState::Algn(id) |
+            SubswarmTaskState::Allc(id) |
+            SubswarmTaskState::Succ(id) |
             SubswarmTaskState::Fail(id) => id == tid,
+            _ => false,
         }
     }
 
-    pub fn is_subswm_success_on_tsk(&self, tid: u32) -> bool {
+    pub fn is_subswm_allocation_done_for_tsk(&self, tid: u32) -> bool {
+        // subswarm aligned to task tid, and top node has been allocated a subtask
+        match self.subswm_tsk {
+            SubswarmTaskState::Allc(id) |
+            SubswarmTaskState::Succ(id) |
+            SubswarmTaskState::Fail(id) => id == tid,
+            _ => false,
+        }
+    }
+
+    pub fn is_subswm_success_in_tsk(&self, tid: u32) -> bool {
         match self.subswm_tsk {
             SubswarmTaskState::Succ(id) => id == tid,
             _ => false,
         }
     }
 
-    pub fn is_subswm_failure_on_tsk(&self, tid: u32) -> bool {
+    pub fn is_subswm_failure_in_tsk(&self, tid: u32) -> bool {
         match self.subswm_tsk {
             SubswarmTaskState::Fail(id) => id == tid,
             _ => false,
@@ -226,7 +237,8 @@ pub enum MsgBody {
     ChangeParent(u32),  // sender sets a third node (on same tree) as the receiver's new parent
     AssignChild(AssignChildAppl),  // sender sets a third node (on same tree) as the receiver's new child
 
-    Task(Task),
+    Task(Task),  // sender is gcs, or sender relays a gcs task to the receiver (sender's parent)
+    Subtask(Task),  // sender allocate a subtask to the receiver (sender's child)
 }
 
 #[derive(Deserialize, Serialize, Debug)]

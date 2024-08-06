@@ -14,8 +14,32 @@ impl TaskExecutor {
         }
     }
 
-    pub fn tid(&self) -> u32 {
+    pub fn get_tid(&self) -> u32 {
         self.task.id
+    }
+
+    pub fn divide_task(&mut self) {
+        unimplemented!("")
+    }
+
+    pub fn is_task_divided(&self) -> bool {
+        unimplemented!("")
+    }
+
+    pub fn get_divided_subtask(&self, cid: u32) -> Option<&Task> {
+        unimplemented!("")
+    }
+
+    pub fn execute(&mut self) {
+        unimplemented!("")
+    }
+
+    pub fn is_task_success(&self) -> bool {
+        unimplemented!("")
+    }
+
+    pub fn is_task_failure(&self) -> bool {
+        unimplemented!("")
     }
 }
 
@@ -38,14 +62,18 @@ impl TaskManager {
         self.task_exec.as_ref()
     }
 
+    pub fn get_current_task_mut(&mut self) -> Option<&mut TaskExecutor> {
+        self.task_exec.as_mut()
+    }
+
     pub fn set_current_task(&mut self, task: Task) {
         self.task_exec = Some(TaskExecutor::new(task));
     }
 
     pub fn clear_current_task(&mut self) {
         match &self.task_exec {
-            Some(e) => {
-                self.old_tasks.insert(e.tid());
+            Some(te) => {
+                self.old_tasks.insert(te.get_tid());
                 self.task_exec = None;
             },
             None => (),
@@ -57,7 +85,7 @@ impl TaskManager {
     }
 
     pub fn is_task_new(&self, task: &Task) -> bool {
-        !self.task_exec.as_ref().is_some_and(|e| e.tid() == task.id)
+        !self.task_exec.as_ref().is_some_and(|te| te.get_tid() == task.id)
         && !self.old_tasks.contains(&task.id)
         && self.queued_tasks.iter().all(|t| t.id != task.id)
     }
