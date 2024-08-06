@@ -7,7 +7,7 @@ use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
 use super::contacts::Contact;
 use super::msg::{id_of, is_id_valid_descendant_of, parent_id_of, root_id_of, Nid};
-use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, TaskState, MsgBody, Msg};
+use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, MsgBody, Msg};
 use super::tm::TaskManager;
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
@@ -15,6 +15,19 @@ pub const DEFAULT_CONNECTION_MSG_DURATION: Duration = Duration::from_millis(200)
 pub const NEW_PARENT_FRESHNESS: Duration = Duration::from_millis(1000);
 pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(300);
 pub const CHILD_ADDING_RATE_LIMIT: f32 = 0.5;
+
+// TaskState::Success means all subnodes and this node have received and succeeded task tid,
+//     this indicates that the subswarm has succeeded task tid.
+// TaskState::Failure means any subnode or this node has received and failed task tid,
+//     this indicates that the subswarm has failed task tid.
+// TaskState::InProgress means this node has received task tid, but hasn't succeeded or failed yet,
+//     in this node state, all subnodes may or may not have received task tid.
+#[derive(Copy, Clone)]
+pub enum TaskState {
+    InProgress,
+    Success,
+    Failure,
+}
 
 // this is a state machine of the node.
 // but need to ensure the coherence of the whole swarm.
@@ -138,34 +151,38 @@ impl NodeManager {
         }
     }
 
-    pub fn get_task_state(&self) -> Option<TaskState> {
+    pub fn get_subswarm_task_state(&self) -> Option<(u32, TaskState)> {
         match self.state {
-            NodeState::InTask(_, ts) => Some(ts),
             NodeState::Free => None,
+            NodeState::InTask(tid, TaskState::Success) => Some((tid, TaskState::Success)),
+            NodeState::InTask(tid, TaskState::Failure) => Some((tid, TaskState::Failure)),
+            NodeState::InTask(tid, TaskState::InProgress) => {
+                if self.children.iter().all(|cnd| cnd.details.has_subswm_tsk_id(tid)) {
+                    Some((tid, TaskState::InProgress))
+                } else {
+                    None
+                }
+            },
         }
     }
 
     pub fn is_subswarm_in_task(&self) -> bool {
         match self.state {
             NodeState::InTask(tid, _) => {
-                self.children.iter().all(|cnd| cnd.desc.has_task_of_id(tid))
+                self.children.iter().all(|cnd| cnd.details.has_subswm_tsk_id(tid))
             },
             NodeState::Free => false,
         }
     }
 
     pub fn get_subswarm_size(&self) -> u32 {
-        let mut subswarm_size: u32 = 1;
-        for nd in &self.children {
-            subswarm_size += nd.details.subswarm;
-        }
-        subswarm_size
+        1 + self.children.iter().map(|cnd| cnd.details.subswarm).sum::<u32>()
     }
 
     pub fn get_swarm_size(&self) -> u32 {
         match &self.parent {
             None => self.get_subswarm_size(),
-            Some(nd) => nd.desc.swm,
+            Some(pnd) => pnd.desc.swm,
         }
     }
 
@@ -182,7 +199,7 @@ impl NodeManager {
     pub fn generate_node_details(&self) -> NodeDetails {
         NodeDetails {
             subswarm: self.get_subswarm_size(),
-            taskstate: self.get_task_state(),
+            subswm_tsk: self.get_subswarm_task_state(),
         }
     }
 
@@ -240,14 +257,14 @@ impl NodeManager {
     }
 
     fn remove_no_connection_nodes(&mut self) {
-        if let Some(nd) = &self.parent {
-            if self.now - nd.last_heard > self.node_lost_duration {
+        if let Some(pnd) = &self.parent {
+            if self.now - pnd.last_heard > self.node_lost_duration {
                 self.remove_parent();
             }
         }
         let rm: Vec<u32> = self.children.iter().filter(
-            |nd| self.now - nd.last_heard > self.node_lost_duration
-        ).map(|nd| nd.get_id()).collect();
+            |cnd| self.now - cnd.last_heard > self.node_lost_duration
+        ).map(|cnd| cnd.get_id()).collect();
         for cid in rm {
             self.remove_child_of_id(cid);
         }
@@ -275,7 +292,9 @@ impl NodeManager {
         match self.tm.get_current_task() {
             None => (),  // subtask not received yet
             Some(t) => {
-                self.tm.execute_task();
+                if self.is_subswarm_in_task() {
+                    self.tm.execute_task();
+                }
                 if self.tm.is_task_failure() || self.children.iter().any(|cnd| cnd.details.failure) {
                     self.switch_state_to_in_task(t.id, TaskState::Failure);
                 }
@@ -366,26 +385,21 @@ impl NodeManager {
     fn maybe_generate_connection_msg(&mut self, msgs_out: &mut Vec<Msg>) {
         // TODO:
         // connection message should be sent periodically, or immediately if node status changes.
-        // however currently cannot detect node status change.
+        // however currently node status changes cannot be detected.
         // instead, check whether `msgs_out` isn't empty, which indicates potential status change.
-        if !msgs_out.is_empty() || (
-            self.now - self.last_conn_msg_t > self.conn_msg_duration && self.has_connections()) {
+        if self.has_connections() && (
+            !msgs_out.is_empty() || self.now - self.last_conn_msg_t > self.conn_msg_duration) {
             msgs_out.push(self.generate_connection_msg());
             self.last_conn_msg_t = self.now;
         }
     }
 
     fn generate_connection_msg(&self) -> Msg {
-        let mut to_ids: Vec<u32> = vec![];
-        if let Some(nd) = &self.parent {
-            to_ids.push(nd.get_id());
+        let mut to_ids: Vec<u32> = self.children.iter().map(|cnd| cnd.get_id()).collect();
+        if let Some(pnd) = &self.parent {
+            to_ids.push(pnd.get_id());
         }
-        let mut cids: Vec<u32> = vec![];
-        for nd in &self.children {
-            let cid = nd.get_id();
-            to_ids.push(cid);
-            cids.push(cid);
-        }
+        assert!(!to_ids.is_empty());
         Msg {
             sender: self.generate_node_desc(),
             to_ids,
@@ -520,7 +534,7 @@ impl NodeManager {
                 desc: desc.clone(),
                 details: NodeDetails {
                     subswarm: 0,  // value here should not matter
-                    taskstate: None,  // value here should not matter
+                    subswm_tsk: None,  // value here should not matter
                 },
                 last_heard: self.now,
             });

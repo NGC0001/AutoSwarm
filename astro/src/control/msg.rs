@@ -48,7 +48,7 @@ pub struct NodeDesc {
     pub p: PosVec,
     pub v: Velocity,
     pub swm: u32,  // the size of the swarm, down-flowing data
-    pub tsk: Option<u32>,  // what task the node has, up/down-flowing data
+    pub tsk: Option<u32>,  // what task the node has, down-flowing data
 }
 
 impl NodeDesc {
@@ -150,16 +150,17 @@ impl Task {
 }
 
 #[derive(Copy, Clone, Deserialize, Serialize, Debug)]
-pub enum TaskState {
-    InProgress,
-    Success,
-    Failure,
+pub enum SubswarmTaskState {
+    Recv,  // all nodes of subswarm have received task id and are in NodeState::InTask
+    Alloc,  // based on Recv, and the top-most node of subswarm has been allocated a subtask
+    Succ,  // based on Alloc, the subswarm has succeeded the task (i.e. top-most node has succeeded)
+    Fail,  // the subswarm has failed the task (i.e. top-most node has failed)
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct NodeDetails {
     pub subswarm: u32,  // the size of the subswarm, up-flowing data
-    pub taskstate: Option<TaskState>,  // the task state of the subswarm, up-flowing data
+    pub subswm_tsk: Option<(u32, SubswarmTaskState)>,  // the task state of the subswarm, up-flowing data
 }
 
 #[derive(Deserialize, Serialize, Debug)]
