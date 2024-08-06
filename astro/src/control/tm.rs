@@ -3,8 +3,24 @@ use std::option::Option;
 
 use super::msg::Task;
 
+pub struct TaskExecutor {
+    task: Task,
+}
+
+impl TaskExecutor {
+    pub fn new(task: Task) -> TaskExecutor {
+        TaskExecutor {
+            task,
+        }
+    }
+
+    pub fn tid(&self) -> u32 {
+        self.task.id
+    }
+}
+
 pub struct TaskManager {
-    task: Option<Task>,
+    task_exec: Option<TaskExecutor>,
     queued_tasks: VecDeque<Task>,
     old_tasks: HashSet<u32>,
 }
@@ -12,21 +28,25 @@ pub struct TaskManager {
 impl TaskManager {
     pub fn new() -> TaskManager {
         TaskManager {
-            task: None,
+            task_exec: None,
             queued_tasks: VecDeque::<Task>::new(),
             old_tasks: HashSet::<u32>::new(),
         }
     }
 
-    pub fn get_current_task(&self) -> Option<&Task> {
-        self.task.as_ref()
+    pub fn get_current_task(&self) -> Option<&TaskExecutor> {
+        self.task_exec.as_ref()
+    }
+
+    pub fn set_current_task(&mut self, task: Task) {
+        self.task_exec = Some(TaskExecutor::new(task));
     }
 
     pub fn clear_current_task(&mut self) {
-        match &self.task {
-            Some(t) => {
-                self.old_tasks.insert(t.id);
-                self.task = None;
+        match &self.task_exec {
+            Some(e) => {
+                self.old_tasks.insert(e.tid());
+                self.task_exec = None;
             },
             None => (),
         }
@@ -37,7 +57,7 @@ impl TaskManager {
     }
 
     pub fn is_task_new(&self, task: &Task) -> bool {
-        !self.task.as_ref().is_some_and(|t| t.id == task.id)
+        !self.task_exec.as_ref().is_some_and(|e| e.tid() == task.id)
         && !self.old_tasks.contains(&task.id)
         && self.queued_tasks.iter().all(|t| t.id != task.id)
     }

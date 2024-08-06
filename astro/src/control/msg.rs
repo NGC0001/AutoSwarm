@@ -149,18 +149,68 @@ impl Task {
     }
 }
 
-#[derive(Copy, Clone, Deserialize, Serialize, Debug)]
+// Algn, Allc, Succ, Fail are considered "in task".
+// usual transitions: None -> Recv -> Algn -> Allc -> Succ -> None.
+// other transitions: Recv/Algn/Allc/Succ -> Fail -> None,
+//                    Succ -> Allc,
+//                    Recv -> Allc (root node).
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum SubswarmTaskState {
-    Recv,  // all nodes of subswarm have received task id and are in NodeState::InTask
-    Alloc,  // based on Recv, and the top-most node of subswarm has been allocated a subtask
-    Succ,  // based on Alloc, the subswarm has succeeded the task (i.e. top-most node has succeeded)
-    Fail,  // the subswarm has failed the task (i.e. top-most node has failed)
+    None,  // none has received task id,
+           // in this case, the top node is in NodeState::Free.
+
+    Recv(u32),  // the top node has received task id, all nodes have not received task id (not aligned to task id),
+                // any node which does have received task id has not failed.
+                // in this case, the top node is in NodeState:::InTask(id, TaskState::InProgress).
+
+    Algn(u32),  // all nodes of subswarm have received task id (aligned) and are in NodeState::InTask(id, ..),
+                // none has failed, all have not succeeded, and the top node has not been allocated subtask.
+                // in this case, the top node is in NodeState::InTask(id, TaskState::InProgress).
+
+    Allc(u32),  // all nodes of subswarm have received task id and are in NodeState::InTask(id, ..),
+                // none has failed, all have not succeeded, and the top node has been allocated a subtask.
+                // in this case, the top node is in NodeState::InTask(id, TaskState::InProgress).
+
+    Succ(u32),  // all nodes of subswarm have received task id and are in NodeState::InTask(id, ..),
+                // all nodes have received their subtasks and have succeeded.
+                // in this case, the top node is in NodeState::InTask(id, TaskState::Success).
+
+    Fail(u32),  // the top node has received task id,
+                // at least one node of subswarm has failed.
+                // in this case, the top node is in NodeState::InTask(id, TaskState::Failure).
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct NodeDetails {
     pub subswarm: u32,  // the size of the subswarm, up-flowing data
-    pub subswm_tsk: Option<(u32, SubswarmTaskState)>,  // the task state of the subswarm, up-flowing data
+    pub subswm_tsk: SubswarmTaskState,  // the task state of the subswarm, up-flowing data
+}
+
+impl NodeDetails {
+    pub fn is_subswm_in_tsk(&self, tid: u32) -> bool {
+        match self.subswm_tsk {
+            SubswarmTaskState::None => false,
+            SubswarmTaskState::Recv(_) => false,
+            SubswarmTaskState::Algn(id) => id == tid,
+            SubswarmTaskState::Allc(id) => id == tid,
+            SubswarmTaskState::Succ(id) => id == tid,
+            SubswarmTaskState::Fail(id) => id == tid,
+        }
+    }
+
+    pub fn is_subswm_success_on_tsk(&self, tid: u32) -> bool {
+        match self.subswm_tsk {
+            SubswarmTaskState::Succ(id) => id == tid,
+            _ => false,
+        }
+    }
+
+    pub fn is_subswm_failure_on_tsk(&self, tid: u32) -> bool {
+        match self.subswm_tsk {
+            SubswarmTaskState::Fail(id) => id == tid,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]

@@ -7,7 +7,7 @@ use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
 use super::contacts::Contact;
 use super::msg::{id_of, is_id_valid_descendant_of, parent_id_of, root_id_of, Nid};
-use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, MsgBody, Msg};
+use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, SubswarmTaskState, MsgBody, Msg};
 use super::tm::TaskManager;
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
@@ -151,27 +151,25 @@ impl NodeManager {
         }
     }
 
-    pub fn get_subswarm_task_state(&self) -> Option<(u32, TaskState)> {
-        match self.state {
-            NodeState::Free => None,
-            NodeState::InTask(tid, TaskState::Success) => Some((tid, TaskState::Success)),
-            NodeState::InTask(tid, TaskState::Failure) => Some((tid, TaskState::Failure)),
-            NodeState::InTask(tid, TaskState::InProgress) => {
-                if self.children.iter().all(|cnd| cnd.details.has_subswm_tsk_id(tid)) {
-                    Some((tid, TaskState::InProgress))
-                } else {
-                    None
-                }
-            },
-        }
+    pub fn all_child_subswarms_in_task(&self, tid: u32) -> bool {
+        self.children.iter().all(|cnd| cnd.details.is_subswm_in_tsk(tid))
     }
 
-    pub fn is_subswarm_in_task(&self) -> bool {
+    pub fn get_subswarm_task_state(&self) -> SubswarmTaskState {
         match self.state {
-            NodeState::InTask(tid, _) => {
-                self.children.iter().all(|cnd| cnd.details.has_subswm_tsk_id(tid))
+            NodeState::Free => SubswarmTaskState::None,
+            NodeState::InTask(tid, TaskState::Success) => SubswarmTaskState::Succ(tid),
+            NodeState::InTask(tid, TaskState::Failure) => SubswarmTaskState::Fail(tid),
+            NodeState::InTask(tid, TaskState::InProgress) => {
+                if self.all_child_subswarms_in_task(tid) {
+                    match self.tm.get_current_task() {
+                        Some(_) => SubswarmTaskState::Allc(tid),
+                        None => SubswarmTaskState::Algn(tid),
+                    }
+                } else {
+                    SubswarmTaskState::Recv(tid)
+                }
             },
-            NodeState::Free => false,
         }
     }
 
@@ -273,8 +271,10 @@ impl NodeManager {
     fn manage_node_state(&mut self, neighbours: &Vec<&Contact>) -> Vec<Msg> {
         // child nodes generally follow the state of their parent,
         // but they themselves decide whether their subtask is success/failure.
-        if let NodeState::InTask(_, TaskState::InProgress) = self.state {
-            self.update_task_in_progress();
+        match self.state {
+            NodeState::InTask(_, TaskState::InProgress) => self.update_task(),
+            NodeState::InTask(_, TaskState::Success) => self.update_task(),
+            _ => (),  // success may change, but failure won't
         }
 
         if self.is_root_node() {
@@ -288,18 +288,23 @@ impl NodeManager {
         }
     }
 
-    fn update_task_in_progress(&mut self) {
+    fn update_task(&mut self) {
         match self.tm.get_current_task() {
             None => (),  // subtask not received yet
-            Some(t) => {
-                if self.is_subswarm_in_task() {
+            Some(te) => {
+                let tid = te.tid();
+                assert!(self.has_task_of_id(tid));
+                if self.all_child_subswarms_in_task(tid) {
+                    // for root node of swarm, "current task set" does not mean swarm aligned
                     self.tm.execute_task();
                 }
-                if self.tm.is_task_failure() || self.children.iter().any(|cnd| cnd.details.failure) {
-                    self.switch_state_to_in_task(t.id, TaskState::Failure);
+                if self.tm.is_task_failure()
+                    || self.children.iter().any(|cnd| cnd.details.is_subswm_failure_on_tsk(tid)) {
+                    self.switch_state_to_in_task(tid, TaskState::Failure);
                 }
-                if self.tm.is_task_success() && self.children.iter().all(|cnd| cnd.details.success) {
-                    self.switch_state_to_in_task(t.id, TaskState::Success);
+                if self.tm.is_task_success()
+                    && self.children.iter().all(|cnd| cnd.details.is_subswm_success_on_tsk(tid)) {
+                    self.switch_state_to_in_task(tid, TaskState::Success);
                 }
             },
         }
@@ -464,17 +469,9 @@ impl NodeManager {
     // deal with Join, but not with ChangeParent/AssignChild
     fn add_child_or_reject(&mut self, desc: &NodeDesc, appl: &JoinAppl) -> Msg {
         let id_other = desc.get_id();
-        let accept = self.is_valid_ancestor_of(id_other) && self.get_root_id() != appl.src_tree
-            && self.is_free() && self.child_adding_rate < CHILD_ADDING_RATE_LIMIT;
-        if accept && !self.has_child_of_id(id_other) {
-            self.children.push(Node {
-                desc: desc.clone(),
-                details: appl.dtl.clone(),
-                last_heard: self.now,
-            });
-            self.child_adding_rate += 1.0;
-            println!("new connection: {:?} <- {}", self.get_nid(), id_other);
-        }
+        let accept: bool = self.get_root_id() != appl.src_tree
+            && self.is_free() && self.child_adding_rate < CHILD_ADDING_RATE_LIMIT
+            && self.add_child(desc, &appl.dtl);
         Msg {
             sender: self.generate_node_desc(),
             to_ids: vec![id_other],
@@ -483,31 +480,25 @@ impl NodeManager {
     }
 
     fn change_parent(&mut self, pid_new: u32, neighbours: &Vec<&Contact>) {
-        let mut changed: bool = false;
+        let mut success: bool = false;
         if let Some(t) = neighbours.iter().find(|t| t.desc.get_id() == pid_new) {
-            changed = self.set_parent(&t.desc);
+            success = self.set_parent(&t.desc);
         }
-        if !changed {
+        if !success {
             self.remove_parent();  // node detached from current swarm tree
         }
     }
 
     fn add_assigned_child(&mut self, appl: &AssignChildAppl, neighbours: &Vec<&Contact>) {
-        let mut added: bool = false;
+        let success: bool =
         if let Some(t) = neighbours.iter().find(|t| t.desc.get_id() == appl.cid) {
-            if self.is_valid_ancestor_of(appl.cid) && self.get_root_id() == t.desc.get_root_id()
+            self.get_root_id() == t.desc.get_root_id()
                 && self.has_task() && t.desc.has_task_of_id(self.get_task_id().unwrap())
-                && !self.has_child_of_id(appl.cid) {
-                self.children.push(Node {
-                    desc: t.desc.clone(),
-                    details: appl.dtl.clone(),
-                    last_heard: self.now,
-                });
-                added = true;
-                println!("assigned connection: {:?} <- {}", self.get_nid(), appl.cid);
-            }
-        }
-        if !added {
+                && self.add_child(&t.desc, &appl.dtl)
+        } else {
+            false
+        };
+        if !success {
             self.fail_task();
         }
     }
@@ -534,7 +525,7 @@ impl NodeManager {
                 desc: desc.clone(),
                 details: NodeDetails {
                     subswarm: 0,  // value here should not matter
-                    subswm_tsk: None,  // value here should not matter
+                    subswm_tsk: SubswarmTaskState::None,  // value here should not matter
                 },
                 last_heard: self.now,
             });
@@ -571,13 +562,34 @@ impl NodeManager {
         };
     }
 
+    fn add_child(&mut self, desc: &NodeDesc, dtl: &NodeDetails) -> bool {
+        let id_other = desc.get_id();
+        if !self.is_valid_ancestor_of(id_other) {
+            false
+        } else {
+            if !self.has_child_of_id(id_other) {
+                self.children.push(Node {
+                    desc: desc.clone(),
+                    details: dtl.clone(),
+                    last_heard: self.now,
+                });
+                self.child_adding_rate += 1.0;
+                println!("new connection: {:?} <- {}", self.get_nid(), id_other);
+            }
+            true
+        }
+    }
+
     // TODO: do not change state if it's rearranging child within same tree
     fn remove_child_of_id(&mut self, cid: u32) {
         if let Some(idx) = self.children.iter().position(|cnd| cnd.get_id() == cid) {
             let cnd = self.children.remove(idx);
+            self.child_adding_rate -= 1.0;
             println!("delete connection: {:?} <-x {}", self.get_nid(), cnd.get_id());
-            if self.is_subswarm_in_task() && cnd.desc.has_task_of_id(self.get_task_id().unwrap()) {
-                self.fail_task();
+            if let Some(tid) = self.get_task_id() {
+                if cnd.desc.has_task_of_id(tid) {  // a child which has received task tid got lost
+                    self.fail_task();
+                }
             }
         }
     }
@@ -597,14 +609,13 @@ impl NodeManager {
     }
 
     fn switch_state_to_in_task(&mut self, tid: u32, ts: TaskState) {
-        let mut switched: bool = true;
-        if let NodeState::InTask(o_tid, TaskState::InProgress) = self.state {
-            if let TaskState::InProgress = ts {
-                switched = o_tid != tid;  // the same task in progress, not considered a switch
-            }
-        }
+        let keep_task: bool = if let NodeState::InTask(o_tid, _) = self.state {
+            o_tid == tid  // task state change of the same task
+        } else {
+            false
+        };
         self.state = NodeState::InTask(tid, ts);
-        if switched {
+        if !keep_task {
             self.tm.clear_current_task();
         }
     }
