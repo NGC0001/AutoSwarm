@@ -76,7 +76,7 @@ impl TaskDivider {
         self.task.id
     }
 
-    pub fn divide_task(&mut self, children_info: &Vec<ChildInfo>) {
+    pub fn divide_task(&mut self, children_info: &Vec<ChildInfo>, comm_range: f32) {
         let subswm_size = children_info.iter().map(|ci| ci.subswm_size).sum::<u32>() + 1;
         let mut distrib_vec: Vec<u32> = self.task.lines.iter().map(|l| l.num_least_uavs()).collect();
         let least_uavs = distrib_vec.iter().sum();
@@ -95,7 +95,7 @@ impl TaskDivider {
         let mut cur_idx: usize = 0;
         let mut cur_distrib: u32 = distrib_vec[cur_idx];
         let mut cur_line: Line = self.task.lines[cur_idx].clone();
-        for (cidx, cinfo) in children_info.iter().enumerate() {
+        for cinfo in children_info.iter() {
             let mut subtask_lines: Vec<Line> = vec![];
             let mut spare_uavs = cinfo.subswm_size;
             while 0 < spare_uavs {
@@ -107,26 +107,68 @@ impl TaskDivider {
                     cur_line = self.task.lines[cur_idx].clone();
                 } else {
                     cur_distrib -= spare_uavs;
-                    let ratio1: f32 = if cur_line.start { (spare_uavs as f32) - 0.5 } else { spare_uavs as f32 };
-                    let ratio2: f32 = if cur_line.end { (cur_distrib as f32) - 0.5 } else { cur_distrib as f32 };
-                    let (line_subtask, line_remain) = Self::divide_line(cur_line, ratio1, ratio2);
+                    let weight1: f32 = if cur_line.start { (spare_uavs as f32) - 0.5 } else { spare_uavs as f32 };
+                    let weight2: f32 = if cur_line.end { (cur_distrib as f32) - 0.5 } else { cur_distrib as f32 };
+                    let ratio = weight1 / (weight1 + weight2);
+                    let (line_subtask, line_remain) = Self::divide_line(cur_line, ratio);
                     spare_uavs = 0;
                     subtask_lines.push(line_subtask);
                     cur_line = line_remain;
                 }
             }
+            self.child_subtask.insert(cinfo.id, Task {
+                id: self.task.id,
+                lines: subtask_lines,
+                duration: self.task.duration,
+                comm_point: None,  // determined later
+            });
         }
         assert!(cur_idx == self.task.lines.len() - 1);
         assert!(cur_distrib == 1);
         assert!(!cur_line.start || !cur_line.end);
         if !cur_line.start && !cur_line.end {
-            cur_line = Self::divide_line(cur_line, 0.5, 0.5).0;  // take the first half
+            cur_line = Self::divide_line(cur_line, 0.5).0;  // take the first half
             cur_line.end = true;  // so the center of the whole is at the end of the half
         }
         let pos_own: &PosVec = if cur_line.start { &cur_line.points.first().unwrap() } else { &cur_line.points.last().unwrap() };
+        if let Some(comm_pos) = &self.task.comm_point {
+            assert!(distance(pos_own, comm_pos) < comm_range);
+        }
+        self.own_subtask = Some(TaskExecutor::new(pos_own, self.task.duration));
+        for (_, t) in &mut self.child_subtask {
+            t.comm_point = Some(*pos_own);
+        }
     }
 
-    fn divide_line(line: Line, ratio1: f32, ratio2: f32) -> (Line, Line) {}
+    fn divide_line(mut line: Line, ratio: f32) -> (Line, Line) {
+        assert!(0.0 < ratio && ratio < 1.0);
+        let len1 = line.calc_length() * ratio;
+        let mut line2 = Line {
+            points: vec![],
+            start: false,
+            end: line.end,
+        };
+        line.end = false;
+        let mut cur_len: f32 = 0.0;
+        let mut prev_len: f32 = 0.0;
+        let mut idx: usize = 0;
+        for i in 1..line.points.len() {
+            prev_len = cur_len;
+            cur_len += distance(&line.points[i], &line.points[i - 1]);
+            if cur_len >= len1 {
+                idx = i;
+                break;
+            }
+        }
+        let weight1 = cur_len - len1;
+        let weight2 = len1 - prev_len;
+        let breakpoint = (line.points[idx - 1] * weight1 + line.points[idx] * weight2) / (weight1 + weight2);
+        line2.points.push(breakpoint.clone());
+        line2.points.extend_from_slice(&line.points[idx..]);
+        line.points.drain(idx..);
+        line.points.push(breakpoint);
+        (line, line2)
+    }
 
     pub fn is_task_divided(&self) -> bool {
         self.own_subtask.is_some()

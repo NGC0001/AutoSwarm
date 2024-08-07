@@ -328,7 +328,7 @@ impl NodeManager {
                         id: cnd.get_id(),
                         subswm_size: cnd.details.subswarm,
                     }).collect();
-                    td.divide_task(&children_info);
+                    td.divide_task(&children_info, self.conf.msg_range);
                 }
                 let te = td.get_own_subtask_mut().unwrap();
                 match te.advance(&self.p, self.now) {
