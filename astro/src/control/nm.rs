@@ -8,7 +8,7 @@ use super::super::kinetics::{distance, PosVec, Velocity};
 use super::contacts::Contact;
 use super::msg::{id_of, is_id_valid_descendant_of, parent_id_of, root_id_of, Nid};
 use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, SubswarmTaskState, MsgBody, Msg};
-use super::tm::TaskManager;
+use super::tm::{ChildInfo, TaskManager};
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
 pub const DEFAULT_STATE_MSG_DURATION: Duration = Duration::from_millis(100);
@@ -324,13 +324,14 @@ impl NodeManager {
             Some(td) => {  // subtask allocated, for non-root node, also means subswarm aligned
                 assert!(tid == td.get_tid());
                 if !td.is_task_divided() {
-                    let children_info = children.iter().map(
-                        |cnd| (cnd.get_id(), cnd.details.subswarm)
-                    ).collect::<Vec<(u32, u32)>>();
-                    td.divide_task();
+                    let children_info: Vec<ChildInfo> = children.iter().map(|cnd| ChildInfo {
+                        id: cnd.get_id(),
+                        subswm_size: cnd.details.subswarm,
+                    }).collect();
+                    td.divide_task(&children_info);
                 }
                 let te = td.get_own_subtask_mut().unwrap();
-                match te.execute(&self.p) {
+                match te.advance(&self.p, self.now) {
                     Some(false) => self.switch_state_to_in_task(tid, TaskState::Failure),  // execution failure
                     Some(true) => {  // execution success
                         if self.children.iter().all(|cnd| cnd.details.is_subswm_success_in_tsk(tid)) {

@@ -119,8 +119,8 @@ pub struct AssignChildAppl {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Line {
     pub points: Vec<PosVec>,
-    pub start: bool,
-    pub end: bool,
+    pub start: bool,  // whether there must be an uav at the start point of the line
+    pub end: bool,  // whether there must be an uav at the end point of the line
 }
 
 impl Line {
@@ -130,7 +130,22 @@ impl Line {
         for i in 1..self.points.len() {
             len += distance(&self.points[i], &self.points[i - 1]);
         }
+        assert!(0.0 < len);
         len
+    }
+
+    pub fn num_end_points(&self) -> u32 {
+        (self.start as u32) + (self.end as u32)
+    }
+
+    // least number of uavs to form this line
+    pub fn num_least_uavs(&self) -> u32 {
+        let end_points = self.num_end_points();
+        if end_points > 0 {
+            end_points
+        } else {
+            1
+        }
     }
 }
 
@@ -140,13 +155,6 @@ pub struct Task {
     pub lines: Vec<Line>,
     pub duration: Duration,
     pub comm_point: Option<PosVec>,
-}
-
-impl Task {
-    pub fn calc_length(&self) -> f32 {
-        assert!(!self.lines.is_empty());
-        self.lines.iter().map(|l| l.calc_length()).sum()
-    }
 }
 
 // usual transitions: None -> Recv -> Algn -> Allc -> Succ -> None.
