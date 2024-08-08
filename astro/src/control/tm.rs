@@ -77,7 +77,7 @@ impl TaskDivider {
     }
 
     pub fn divide_task(&mut self, children_info: &Vec<ChildInfo>, comm_range: f32) {
-        let (pos_own, line_groups) = self.generate_subtask_line_groups(&children_info);
+        let (pos_own, line_groups) = self.divide_pos_own_and_line_groups(&children_info);
         if let Some(comm_pos) = &self.task.comm_point {
             assert!(distance(&pos_own, comm_pos) < comm_range);  // top node should not lose contact with its parent
         }
@@ -92,46 +92,22 @@ impl TaskDivider {
         }
     }
 
-    fn generate_subtask_line_groups(&self, children_info: &Vec<ChildInfo>) -> (PosVec, Vec<Vec<Line>>) {
+    fn divide_pos_own_and_line_groups(&self, children_info: &Vec<ChildInfo>) -> (PosVec, Vec<Vec<Line>>) {
         let subswm_size = children_info.iter().map(|ci| ci.subswm_size).sum::<u32>() + 1;
         let distrib_vec = self.distribute_uav_to_lines(subswm_size);
-        let lines = &self.task.lines;
-
-        unimplemented!("");
-        let mut subtask_line_groups: Vec<Vec<Line>> = vec![];
-        let mut cur_idx: usize = 0;
-        let mut cur_distrib: u32 = distrib_vec[cur_idx];
-        let mut cur_line: Line = lines[cur_idx].clone();
-        for cinfo in children_info.iter() {
-            let mut subtask_lines: Vec<Line> = vec![];
-            let mut spare_uavs = cinfo.subswm_size;
-            while 0 < spare_uavs {
-                if cur_distrib <= spare_uavs {
-                    spare_uavs -= cur_distrib;
-                    subtask_lines.push(cur_line);
-                    cur_idx += 1;
-                    cur_distrib = distrib_vec[cur_idx];
-                    cur_line = lines[cur_idx].clone();
-                } else {
-                    cur_distrib -= spare_uavs;
-                    let weight1: f32 = if cur_line.start { (spare_uavs as f32) - 0.5 } else { spare_uavs as f32 };
-                    let weight2: f32 = if cur_line.end { (cur_distrib as f32) - 0.5 } else { cur_distrib as f32 };
-                    let ratio = weight1 / (weight1 + weight2);
-                    let (line_subtask, line_remain) = Self::divide_line(cur_line, ratio);
-                    spare_uavs = 0;
-                    subtask_lines.push(line_subtask);
-                    cur_line = line_remain;
-                }
-            }
-            subtask_line_groups.push(subtask_lines);
+        let mut grp_sizes: Vec<u32> = vec![1];
+        for cinfo in children_info {
+            grp_sizes.push(cinfo.subswm_size);
         }
-        assert!(cur_idx == lines.len() - 1);
-        assert!(cur_distrib == 1);
-        assert!(!cur_line.start || !cur_line.end);
-        let pos_own: PosVec = if cur_line.start { cur_line.points.first().unwrap().clone() }
-            else if cur_line.end { cur_line.points.last().unwrap().clone() }
-            else { Self::divide_line(cur_line, 0.5).0.points.last().unwrap().clone() };
-        (pos_own, subtask_line_groups)
+        let mut line_groups = Self::divide_line_groups(&self.task.lines, &distrib_vec, &grp_sizes);
+        let mut line_grp_own = line_groups.remove(0);
+        assert!(line_grp_own.len() == 1);
+        let line_own = line_grp_own.remove(0);
+        assert!(!line_own.start || !line_own.end);
+        let pos_own: PosVec = if line_own.start { line_own.points.first().unwrap().clone() }
+            else if line_own.end { line_own.points.last().unwrap().clone() }
+            else { Self::divide_line(line_own, 0.5).0.points.last().unwrap().clone() };
+        (pos_own, line_groups)
     }
 
     fn distribute_uav_to_lines(&self, subswm_size: u32) -> Vec<u32> {
@@ -152,6 +128,48 @@ impl TaskDivider {
             *distrib_max_load += 1;
         }
         distrib_vec
+    }
+
+    fn divide_line_groups(lines: &Vec<Line>, distrib_vec: &Vec<u32>, grp_sizes: &Vec<u32>) -> Vec<Vec<Line>> {
+        let mut line_groups: Vec<Vec<Line>> = vec![];
+        let mut line_grp: Vec<Line> = vec![];
+        let mut line_task: Line;
+        let (mut line_idx, mut line, mut distrib) = (0, None, 0);
+        let (mut grp_idx, mut uavs) = (0, 0);
+        while line_idx < lines.len() && grp_idx < grp_sizes.len() {
+            if distrib == 0 {  // assert!(line.is_none());
+                (line, distrib) = (Some(lines[line_idx].clone()), distrib_vec[line_idx]);
+            }
+            if uavs == 0 {
+                uavs = grp_sizes[grp_idx];
+            }
+            (line_task, line, distrib, uavs) = Self::split_line_for_uav_group(line.unwrap(), distrib, uavs);
+            line_grp.push(line_task);
+            if distrib == 0 {
+                line_idx += 1;
+            }
+            if uavs == 0 {
+                grp_idx += 1;
+                line_groups.push(line_grp);
+                line_grp = vec![];
+            }
+        }
+        assert!(line_idx == lines.len() && grp_idx == grp_sizes.len() && distrib == 0 && uavs == 0);
+        line_groups
+    }
+
+    // out: task_line_split_off, left_line_part, left_distrib, left_uavs
+    fn split_line_for_uav_group(line: Line, distrib: u32, uavs: u32) -> (Line, Option<Line>, u32, u32) {
+        if distrib <= uavs {
+            (line, None, 0, uavs - distrib)
+        } else {
+            let left_distrib = distrib - uavs;
+            let weight_split: f32 = if line.start { (uavs as f32) - 0.5 } else { uavs as f32 };
+            let weight_left: f32 = if line.end { (left_distrib as f32) - 0.5 } else { left_distrib as f32 };
+            let ratio = weight_split / (weight_split + weight_left);
+            let (line_split, line_left) = Self::divide_line(line, ratio);
+            (line_split, Some(line_left), left_distrib, 0)
+        }
     }
 
     fn divide_line(mut line: Line, ratio: f32) -> (Line, Line) {  // divide a line into tow by ratio
