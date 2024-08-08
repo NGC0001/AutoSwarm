@@ -3,13 +3,36 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use astro::control::msg::{NodeDesc, MsgBody, Msg, Task};
+use astro::kinetics::PosVec;
+use astro::control::msg::{NodeDesc, MsgBody, Msg, Line, Task};
 
 #[derive(Deserialize, Serialize, Debug)]
 struct TaskInfo {
     task: Task,
     to_ids: Vec<u32>,
     wait_duration: Duration,
+}
+
+impl TaskInfo {
+    pub fn demo() -> TaskInfo {
+        TaskInfo {
+            task: Task {
+                id: 0,
+                lines: vec![Line {
+                    points: vec![
+                        PosVec {x: 0.0, y: 10.0, z: 10.0},
+                        PosVec {x: 0.0, y: 20.0, z: 10.0},
+                    ],
+                    start: true,
+                    end: true,
+                }],
+                duration: Duration::from_secs(10),
+                comm_point: None,
+            },
+            to_ids: vec![2, 3],
+            wait_duration: Duration::from_secs(60),
+        }
+    }
 }
 
 pub struct Gcs {
@@ -25,6 +48,8 @@ impl Gcs {
                 let task_info: TaskInfo = serde_json::from_str(line).unwrap();
                 tasks.push(task_info);
             }
+        } else {
+            tasks.push(TaskInfo::demo());
         }
         Gcs {
             start_t: Instant::now(),
