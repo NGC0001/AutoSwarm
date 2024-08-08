@@ -33,7 +33,7 @@ impl Control {
         let last_broadcasting_t = Instant::now() - broadcasting_duration;
         Control {
             conf: conf.clone(),
-            contacts: Contacts::new(p, conf.msg_range),
+            contacts: Contacts::new(p, conf.contact_range),
             nm: NodeManager::new_root_node(conf, p, v),
             collivoid: ColliVoid::new(conf),
             broadcasting_duration,

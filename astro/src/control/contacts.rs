@@ -4,8 +4,7 @@ use std::time::{Duration, Instant};
 use super::super::kinetics::{PosVec, distance};
 use super::msg::{Msg, Nid, NodeDesc};
 
-pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.8;
-pub const DEFAULT_OUT_OF_RANGE_THRESHOLD: f32 = 0.95;
+pub const DEFAULT_IN_RANGE_THRESHOLD: f32 = 0.9;
 pub const DEFAULT_LOST_DURATION: Duration = Duration::from_secs(3);
 
 pub struct Contact {
@@ -31,20 +30,18 @@ impl Contact {
 pub struct Contacts {
     p_self: PosVec,
     contacts_in_range: HashMap<u32, Contact>,
-    msg_range: f32,
+    contact_range: f32,
     in_range_threshold: f32,
-    out_of_range_threshold: f32,
     lost_duration: Duration,
 }
 
 impl Contacts {
-    pub fn new(p: &PosVec, msg_range: f32) -> Contacts {
+    pub fn new(p: &PosVec, contact_range: f32) -> Contacts {
         Contacts {
             p_self: *p,
             contacts_in_range: HashMap::new(),
-            msg_range,
+            contact_range,
             in_range_threshold: DEFAULT_IN_RANGE_THRESHOLD,
-            out_of_range_threshold: DEFAULT_OUT_OF_RANGE_THRESHOLD,
             lost_duration: DEFAULT_LOST_DURATION,
         }
     }
@@ -53,8 +50,7 @@ impl Contacts {
     //
     // with these input messages, pick out those nodes that go out of contact,
     // and those nodes that go into contact.
-    // a node farther than `out_of_range_threshold * msg_range` is considered out of contact.
-    // a node nearer than `in_range_threshold * msg_range` is considered into contact.
+    // a node nearer than `in_range_threshold * contact_range` is considered into contact.
     //
     // `neighbours`: all nodes currently in contact
     // `add`: nodes newly into contact
@@ -99,7 +95,7 @@ impl Contacts {
             let d = distance(&msg.sender.p, &self.p_self);
             match self.contacts_in_range.get_mut(id_other) {
                 Some(t) => {
-                    if d > self.msg_range * self.out_of_range_threshold {
+                    if d > self.contact_range {
                         // existing contact goes out of range
                         self.contacts_in_range.remove(id_other);
                         rm.push(*id_other);
@@ -109,7 +105,7 @@ impl Contacts {
                     }
                 },
                 None => {
-                    if d <= self.msg_range * self.in_range_threshold {
+                    if d <= self.contact_range * self.in_range_threshold {
                         // new contact goes into range
                         self.contacts_in_range.insert(*id_other, Contact::from_msg(msg_time, msg));
                         add.push(&msg.sender.nid);

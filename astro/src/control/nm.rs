@@ -328,7 +328,7 @@ impl NodeManager {
                         id: cnd.get_id(),
                         subswm_size: cnd.details.subswarm,
                     }).collect();
-                    td.divide_task(&children_info, self.conf.msg_range);
+                    td.divide_task(&children_info, self.conf.contact_range);
                 }
                 let te = td.get_own_subtask_mut().unwrap();
                 match te.advance(&self.p, self.now) {
@@ -458,7 +458,7 @@ impl NodeManager {
                 // TODO: this is a bad algorithm.
                 let s = &pn.desc.p - &self.p;
                 let dist: f32 = s.norm();
-                if dist < self.conf.msg_range / 3.0 {
+                if dist < self.conf.contact_range / 3.0 {
                     Velocity::zero()
                 } else {
                     let factor: f32 = (self.conf.max_v / 2.0) / dist;
