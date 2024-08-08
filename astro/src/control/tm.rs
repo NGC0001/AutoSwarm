@@ -2,15 +2,19 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::option::Option;
 use std::time::{Duration, Instant};
 
-use super::super::kinetics::{distance, PosVec};
+use super::super::kinetics::{distance, PosVec, Velocity};
 
 use super::msg::{Line, Task};
 
 pub const DEFAULT_POS_MAINTAIN_PRECISION: f32 = 0.5;
+pub const DEFAULT_MAX_V_USED_RATIO: f32 = 0.8;
+pub const DEFAULT_FLY_TO_TARGET_TIMESCALE: Duration = Duration::from_millis(1000);
 
 // executor monitors whether the uav is on assigned target position.
 pub struct TaskExecutor {
     pos_target: PosVec,
+    fly_to_target_timescale: Duration,
+    max_v_used_ratio: f32,
     on_pos_t: Option<Instant>,
     succ_duration: Duration,
 }
@@ -19,9 +23,17 @@ impl TaskExecutor {
     pub fn new(pos_target: &PosVec, succ_duration: Duration) -> TaskExecutor {
         TaskExecutor {
             pos_target: *pos_target,
+            fly_to_target_timescale: DEFAULT_FLY_TO_TARGET_TIMESCALE,
+            max_v_used_ratio: DEFAULT_MAX_V_USED_RATIO,
             on_pos_t: None,
             succ_duration,
         }
+    }
+
+    pub fn calc_task_velocity(&self, pos: &PosVec, max_v: f32) -> Velocity {
+        let v = (self.pos_target - pos) / self.fly_to_target_timescale;
+        let max_v_used = max_v * self.max_v_used_ratio;
+        v.get_norm_limited(max_v_used)
     }
 
     pub fn advance(&mut self, pos: &PosVec, now: Instant) -> Option<bool> {

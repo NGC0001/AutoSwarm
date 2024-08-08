@@ -11,6 +11,9 @@ use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, Subswar
 use super::tm::{ChildInfo, TaskManager};
 
 pub const DEFAULT_NODE_LOST_DURATION: Duration = Duration::from_secs(5);
+pub const DEFAULT_CONNECTION_RANGE_TO_CONTACT_RANGE_RATIO: f32 = 0.33;
+pub const DEFAULT_CONNECTION_RANGE_TO_RADIUS_RATIO: f32 = 100.0;
+pub const DEFAULT_CONNECTION_MAINTAIN_TIMESCALE: Duration = Duration::from_millis(3000);
 pub const DEFAULT_STATE_MSG_DURATION: Duration = Duration::from_millis(100);
 pub const NEW_PARENT_FRESHNESS: Duration = Duration::from_millis(1000);
 pub const CHILD_ADDING_TIMESCALE: Duration = Duration::from_millis(300);
@@ -61,6 +64,7 @@ pub struct NodeManager {
     parent: Option<Node>,  // need backup ids (indirect upper nodes / sibling nodes)
     children: Vec<Node>,
     node_lost_duration: Duration,
+    connection_range: f32,
     state_msg_duration: Duration,
     last_state_msg_t: Instant,
 }
@@ -82,6 +86,8 @@ impl NodeManager {
             parent: None,
             children: vec![],
             node_lost_duration: DEFAULT_NODE_LOST_DURATION,
+            connection_range: f32::min(conf.contact_range * DEFAULT_CONNECTION_RANGE_TO_CONTACT_RANGE_RATIO,
+                conf.uav_radius * DEFAULT_CONNECTION_RANGE_TO_RADIUS_RATIO),
             state_msg_duration: DEFAULT_STATE_MSG_DURATION,
             last_state_msg_t: now,
         }
@@ -451,26 +457,50 @@ impl NodeManager {
         }
     }
 
-    fn calc_next_v(&self) -> Velocity {  // TODO: calculate task related velocity
-        match &self.parent {
-            None => Velocity::zero(),
-            Some(pn) => {
-                // TODO: this is a bad algorithm.
-                let s = &pn.desc.p - &self.p;
-                let dist: f32 = s.norm();
-                if dist < self.conf.contact_range / 3.0 {
-                    Velocity::zero()
-                } else {
-                    let factor: f32 = (self.conf.max_v / 2.0) / dist;
-                    // TODO: take parent velocity into account
-                    Velocity {
-                        vx: s.x * factor,
-                        vy: s.y * factor,
-                        vz: s.z * factor,
-                    }
-                }
+    fn calc_next_v(&self) -> Velocity {
+        match (self.calc_v_connection(), self.get_task_velocity()) {
+            (None, None) => Velocity::zero(),
+            (Some(v_conn), None) => v_conn,
+            (None, Some(v_task)) => v_task,
+            (Some(v_conn), Some(v_task)) => {
+                let p_parent = &self.parent.as_ref().unwrap().desc.p;
+                let dist = distance(p_parent, &self.p);
+                const R1: f32 = 0.8;
+                const R2: f32 = 0.95;
+                let w = f32::min(f32::max(R1, dist / self.conf.contact_range), R2);
+                v_task * ((R2 - w) / (R2 - R1)) + v_conn * ((w - R1) / (R2 - R1))
             },
         }
+    }
+
+    fn calc_v_connection(&self) -> Option<Velocity> {
+        if self.parent.is_none() {
+            return None;
+        }
+        let parent = &self.parent.as_ref().unwrap().desc;
+        let direct = &parent.p - &self.p;
+        let dist = direct.norm();
+        let conn_range = self.connection_range;
+        if dist <= conn_range {
+            Some(parent.v * dist / conn_range)
+        } else {  // too far away, get closer to parent
+            let v_approach = direct * (1.0 - conn_range / dist) / DEFAULT_CONNECTION_MAINTAIN_TIMESCALE;
+            let v_sum = (parent.v + v_approach).get_norm_limited(self.conf.max_v);
+            Some(v_sum)
+        }
+    }
+
+    fn get_task_velocity(&self) -> Option<Velocity> {
+        if let NodeState::InTask(_, TaskState::InProgress | TaskState::Success) = self.state {
+            if let Some(td) = self.tm.get_current_task() {
+                if let Some(te) = td.get_own_subtask() {
+                    // task velocity generated only after task divided,
+                    // maybe for root node this can be before task division.
+                    return Some(te.calc_task_velocity(&self.p, self.conf.max_v));
+                }
+            }
+        }
+        None
     }
 
     fn update_connection(&mut self, desc: &NodeDesc, dtl: &NodeDetails) {

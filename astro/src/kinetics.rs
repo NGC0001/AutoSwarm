@@ -27,6 +27,41 @@ pub struct Velocity {  // m/s
     pub vz: f32,
 }
 
+impl Velocity {
+    pub fn limit_norm_to(&mut self, limit: f32) {
+        let norm = self.norm();
+        if norm > limit {
+            *self *= limit / norm;
+        }
+    }
+
+    pub fn get_norm_limited(&self, limit: f32) -> Velocity {
+        let mut v = *self;
+        v.limit_norm_to(limit);
+        v
+    }
+
+    pub fn paral_component_to(&self, p: &PosVec) -> f32 {
+        let direct = p.unit().unwrap();
+        let product = direct.x * self.vx + direct.y * self.vy + direct.z * self.vz;  // inner product
+        product
+    }
+
+    pub fn paral_to(&self, p: &PosVec) -> Velocity {
+        let direct = p.unit().unwrap();
+        let product = direct.x * self.vx + direct.y * self.vy + direct.z * self.vz;  // inner product
+        Velocity {
+            vx: direct.x * product,
+            vy: direct.y * product,
+            vz: direct.z * product,
+        }
+    }
+
+    pub fn perp_to(&self, p: &PosVec) -> Velocity {
+        self - self.paral_to(p)
+    }
+}
+
 impl ops::Mul<Duration> for &Velocity {
     type Output = PosVec;
 
@@ -98,13 +133,8 @@ impl Kinetics {
     }
 
     pub fn set_v(&mut self, v: &Velocity) {
-        let v_norm = v.norm();
-        self.v = if v_norm <= self.max_v {
-            *v
-        } else {
-            // ensure that the velocity doesn't exceed limit.
-            v * (self.max_v / v_norm)
-        };
+        self.v = *v;
+        self.v.limit_norm_to(self.max_v);  // ensure that the velocity doesn't exceed limit.
         self.send_kntc_msg();
     }
 

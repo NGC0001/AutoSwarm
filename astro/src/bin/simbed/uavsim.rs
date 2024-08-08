@@ -57,8 +57,9 @@ impl UavSim {
 
     pub fn update_v(&mut self) -> bool {
         let mut updated: bool = false;
-        for m in self.tc.borrow_mut().retrieve::<KntcMsg>(kinetics::CHANNEL) {
+        if let Some(m) = self.tc.borrow_mut().retrieve::<KntcMsg>(kinetics::CHANNEL).last() {
             self.v = m.v;
+            self.v.limit_norm_to(self.conf.max_v);
             updated = true;
         }
         updated

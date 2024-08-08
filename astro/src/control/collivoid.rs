@@ -10,11 +10,14 @@ use super::super::kinetics::{distance, PosVec, Velocity};
 use super::msg::NodeDesc;
 
 pub const DEFAULT_TIME_SCALE: Duration = Duration::from_millis(1000);
+pub const DEFAULT_MINIMAL_ALERT_DISTANCE_RATIO: f32 = 5.0;
 pub const DEFAULT_MODEST_NUM_DANGERS: usize = 2;
+pub const DEFAULT_EVASION_DIST_RATIO: f32 = 3.0;
 
 pub struct ColliVoid {
     t_scale: Duration,
     modest_num_dangers: usize,
+    minimal_alert_dist: f32,
     evasion_dist: f32,
 }
 
@@ -23,7 +26,8 @@ impl ColliVoid {
         ColliVoid {
             t_scale: DEFAULT_TIME_SCALE,  // depends on acceleration
             modest_num_dangers: DEFAULT_MODEST_NUM_DANGERS,
-            evasion_dist: conf.uav_radius * 3.0,
+            minimal_alert_dist: conf.uav_radius * DEFAULT_MINIMAL_ALERT_DISTANCE_RATIO,
+            evasion_dist: conf.uav_radius * DEFAULT_EVASION_DIST_RATIO,
         }
     }
 
@@ -42,19 +46,13 @@ impl ColliVoid {
         self.evade(&capped_v, p_self, &nearest)
     }
 
-    // TODO: maybe considering the velocity of `target`
-    // TODO: detour rather than just stop
+    // TODO: maybe considering the velocity of `target`, and detour rather than just stop
     fn evade(&self, v: &Velocity, p_self: &PosVec, target: &NodeDesc) -> Velocity {
-        let direct: PosVec = (target.p - p_self).unit().unwrap();
-        let component = direct.x * v.vx + direct.y * v.vy + direct.z * v.vz;  // inner product
-        if component <= 0.0 {
+        let direct = &target.p - p_self;
+        if v.paral_component_to(&direct)<= 0.0 {
             return *v;
         }
-        v - component * Velocity {  // strip off the velocity component flying towards the target
-            vx: direct.x,
-            vy: direct.y,
-            vz: direct.z,
-        }
+        v.perp_to(&direct)  // strip off the velocity component flying towards the target
     }
 
     fn get_capped_v(&self, v_aim: &Velocity, p_self: &PosVec, dangers: &Vec<&NodeDesc>) -> Velocity {
@@ -67,20 +65,17 @@ impl ColliVoid {
         }
         v_ave /= dangers.len() as f32;
         let v_delta_cap: f32 = ((dangers[self.modest_num_dangers].p - p_self) / self.t_scale).norm();
-        let v_delta: Velocity = v_aim - v_ave;
-        if v_delta.norm() <= v_delta_cap {
-            *v_aim
-        } else {
-            v_ave + v_delta.unit().unwrap() * v_delta_cap
-        }
+        let mut v_delta: Velocity = v_aim - v_ave;
+        v_delta.limit_norm_to(v_delta_cap);
+        v_ave + v_delta
     }
 
     // result is sorted by distance
     fn pick_dangers<'a>(&self, v_aim: &Velocity, p_self: &PosVec, neighbours: &Vec<&'a NodeDesc>)
     -> Vec<&'a NodeDesc> {
-        let safe_d: f32 = (v_aim * self.t_scale).norm();
+        let alert_d: f32 = f32::max((v_aim * self.t_scale).norm(), self.minimal_alert_dist);
         let mut dangers: Vec<&NodeDesc> = neighbours.iter().map(|nd| *nd).filter(
-            |nd| distance(&nd.p, p_self) <= safe_d).collect();
+            |nd| distance(&nd.p, p_self) <= alert_d).collect();
         dangers.sort_unstable_by(|nd1, nd2| {
             distance(&nd1.p, p_self).partial_cmp(&distance(&nd2.p, p_self)).unwrap()
         });
