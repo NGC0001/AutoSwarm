@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
 use super::contacts::Contact;
-use super::msg::{id_of, is_id_valid_descendant_of, parent_id_of, root_id_of, Nid};
+use super::msg::{root_nid, id_of, is_id_valid_descendant_of, parent_id_of, root_id_of, Nid};
 use super::msg::{NodeDesc, NodeDetails, JoinAppl, AssignChildAppl, Task, SubswarmTaskState, MsgBody, Msg};
 use super::tm::{ChildInfo, TaskManager};
 
@@ -79,7 +79,7 @@ impl NodeManager {
             p: *p,
             v: *v,
 
-            nid: vec![conf.id],
+            nid: root_nid(conf.id),
             state: NodeState::Free,
             tm: TaskManager::new(),
 

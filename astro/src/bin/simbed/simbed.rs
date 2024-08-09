@@ -74,9 +74,7 @@ impl SimBed {
             }
         }
         Self::update_kinetics(&mut uav_sims);
-        let msg_packs = Self::collect_message_packs(&uav_sims);
-        // println!("message packs: {:?}\n",
-        //     msg_packs.iter().map(|p| (p.get_source_id(), p.get_num_data())).collect::<Vec<(u32, usize)>>());
+        let msg_packs = Self::collect_message_packs_and_update_nids(&mut uav_sims);
         Self::dispose_message_packs(&uav_sims, &msg_packs);
         Self::dispose_gcs_messages(&uav_sims, &self.gcs.generate_gcs_msgs(now));
         let collision_ids = Self::check_collisions_by_msg_packs(&uav_sims, &msg_packs);
@@ -90,10 +88,10 @@ impl SimBed {
         }
     }
 
-    fn collect_message_packs(sims: &Vec<&mut UavSim>) -> Vec<MsgPack> {
+    fn collect_message_packs_and_update_nids(sims: &mut Vec<&mut UavSim>) -> Vec<MsgPack> {
         let mut packs: Vec<MsgPack> = vec![];
         for sim in sims {
-            packs.push(sim.collect_comm_msgs());
+            packs.push(sim.collect_comm_msgs_and_update_nid());
         }
         packs
     }

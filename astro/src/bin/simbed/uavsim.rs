@@ -6,7 +6,7 @@ use std::rc::Rc;
 use astro::comm;
 use astro::kinetics::{self, PosVec, Velocity, KntcMsg, distance};
 use astro::gps::{self, GpsMsg};
-use astro::control::msg::Msg;
+use astro::control::msg::{Nid, root_nid, Msg};
 use astro::transceiver::Transceiver;
 
 use super::uavconf::UavConf;
@@ -31,6 +31,7 @@ impl MsgPack {
 // provides simulation support for a running UAV.
 pub struct UavSim {
     conf: Rc<UavConf>,
+    nid: Nid,
     p: PosVec,
     p_calc_t: Instant,
     p_send_t: Instant,
@@ -43,6 +44,7 @@ impl UavSim {
         let now = Instant::now();
         UavSim {
             conf: conf.clone(),
+            nid: root_nid(conf.id),
             p: conf.init_p,
             p_calc_t: now,
             p_send_t: now - conf.p_send_intrvl,
@@ -80,12 +82,17 @@ impl UavSim {
         self.tc.borrow_mut().send(gps::CHANNEL, &msg);
     }
 
-    pub fn collect_comm_msgs(&self) -> MsgPack {  // collect messages from this UAV
+    pub fn collect_comm_msgs_and_update_nid(&mut self) -> MsgPack {  // collect messages from this UAV
+        let data_vec = self.tc.borrow_mut().retrieve_raw(comm::CHANNEL);
+        if let Some(d) = data_vec.last() {
+            let msg: Msg = serde_json::from_str(d).unwrap();
+            self.nid = msg.sender.nid;
+        }
         MsgPack {
             id: self.conf.id,
             p: self.p,
             msg_out_distance: self.conf.msg_out_distance,
-            data_vec: self.tc.borrow_mut().retrieve_raw(comm::CHANNEL),
+            data_vec,
         }
     }
 

@@ -13,6 +13,9 @@ pub const GCS_ID: u32 = u32::max_value();
 pub type Nid = Vec<u32>;
 
 #[inline]
+pub fn root_nid(id: u32) -> Nid { vec![id] }
+
+#[inline]
 pub fn id_of(nid: &Nid) -> u32 {
     *nid.last().unwrap()
 }
@@ -95,7 +98,7 @@ impl NodeDesc {
 
     pub fn get_gcs_desc() -> NodeDesc {
         NodeDesc {
-            nid: vec![GCS_ID],
+            nid: root_nid(GCS_ID),
             p: PosVec::zero(),
             v: Velocity::zero(),
             swm: 0,
