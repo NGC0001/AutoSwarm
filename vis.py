@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
 
 import matplotlib.pyplot as plt
+import networkx as nx
+from networkx.drawing.nx_pydot import graphviz_layout
 import json
+import pydot
 import sys
+
+
+T = nx.balanced_tree(2, 3)
+figure, axes = plt.subplots(3)
+for i, prog in enumerate(["twopi", "dot", "circo"]):
+    pos = graphviz_layout(T, prog=prog)
+    nx.draw(T, pos=pos, ax=axes[i])
+plt.show()
 
 
 def load_snapshots(fname):
