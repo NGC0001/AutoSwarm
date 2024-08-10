@@ -3,6 +3,7 @@
 *.drawio.bkp
 
 socket_*
+output/
 
 # https://github.com/github/gitignore/blob/main/Rust.gitignore
 debug/

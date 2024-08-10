@@ -3,6 +3,8 @@ use std::cell::RefCell;
 use std::time::Instant;
 use std::rc::Rc;
 
+use serde::Serialize;
+
 use astro::comm;
 use astro::kinetics::{self, PosVec, Velocity, KntcMsg, distance};
 use astro::gps::{self, GpsMsg};
@@ -26,6 +28,14 @@ impl MsgPack {
     pub fn get_source_p(&self) -> &PosVec {
         &self.p
     }
+}
+
+// used to record uav status in a file
+#[derive(Clone, Serialize, Debug)]
+pub struct UavInfo {
+    pub nid: Nid,
+    pub p: PosVec,
+    pub v: Velocity,
 }
 
 // provides simulation support for a running UAV.
@@ -55,6 +65,14 @@ impl UavSim {
 
     pub fn get_id(&self) -> u32 {
         self.conf.id
+    }
+
+    pub fn get_info(&self) -> UavInfo {
+        UavInfo {
+            nid: self.nid.clone(),
+            p: self.p,
+            v: self.v,
+        }
     }
 
     pub fn update_v(&mut self) -> bool {

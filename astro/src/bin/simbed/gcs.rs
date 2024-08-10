@@ -1,5 +1,5 @@
 use std::fs::read_to_string;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +36,6 @@ impl TaskInfo {
 }
 
 pub struct Gcs {
-    start_t: Instant,
     tasks: Vec<TaskInfo>,
 }
 
@@ -52,16 +51,15 @@ impl Gcs {
             tasks.push(TaskInfo::demo());
         }
         Gcs {
-            start_t: Instant::now(),
             tasks,
         }
     }
 
-    pub fn generate_gcs_msgs(&mut self, now: Instant) -> Vec<Msg> {
+    pub fn generate_gcs_msgs(&mut self, running_duration: Duration) -> Vec<Msg> {
         let mut msgs: Vec<Msg> = vec![];
         let mut dispatched: Vec<u32> = vec![];
         for ti in &self.tasks {
-            if now - self.start_t >= ti.wait_duration {
+            if running_duration >= ti.wait_duration {
                 msgs.push(Msg {
                     sender: NodeDesc::get_gcs_desc(),
                     to_ids: ti.to_ids.clone(),

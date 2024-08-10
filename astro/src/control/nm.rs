@@ -363,8 +363,10 @@ impl NodeManager {
         // free, or task failure, or task success
         match self.tm.pop_queued_task() {
             Some(t) => {  // swarm from free/task to another task
-                self.switch_state_to_in_task(t.id, TaskState::InProgress);
+                let tid = t.id;
+                self.switch_state_to_in_task(tid, TaskState::InProgress);
                 self.tm.set_current_task(t);
+                println!("task {} received by {}", tid, self.get_id());
             },
             None => {  // swarm from task/free to free
                 self.switch_state_to_free();
