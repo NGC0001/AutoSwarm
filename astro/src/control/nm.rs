@@ -283,7 +283,7 @@ impl NodeManager {
         match self.state {
             NodeState::InTask(tid, TaskState::InProgress | TaskState::Success) => {
                 if self.children.iter().any(|cnd| cnd.details.is_subswm_failure_in_tsk(tid)) {
-                    self.switch_state_to_in_task(tid, TaskState::Failure);
+                    self.fail_task();
                 } else if self.all_child_subswarms_alignment_done_for_task(tid) {
                     // only after subswarm aligned (which means accurate subswarm size), can the top node divide task.
                     self.advance_task(tid);
@@ -338,7 +338,7 @@ impl NodeManager {
                 }
                 let te = td.get_own_subtask_mut().unwrap();
                 match te.advance(&self.p, self.now) {
-                    Some(false) => self.switch_state_to_in_task(tid, TaskState::Failure),  // execution failure
+                    Some(false) => self.fail_task(),  // execution failure
                     Some(true) => {  // execution success
                         if self.children.iter().all(|cnd| cnd.details.is_subswm_success_in_tsk(tid)) {
                             self.switch_state_to_in_task(tid, TaskState::Success);

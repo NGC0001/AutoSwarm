@@ -30,7 +30,7 @@ impl TaskInfo {
                 comm_point: None,
             },
             to_ids: vec![2, 3],
-            wait_duration: Duration::from_secs(60),
+            wait_duration: Duration::from_secs(10),
         }
     }
 }

@@ -6,7 +6,7 @@ use super::super::kinetics::{distance, PosVec, Velocity};
 
 use super::msg::{Line, Task};
 
-pub const DEFAULT_POS_MAINTAIN_PRECISION: f32 = 0.5;
+pub const DEFAULT_POS_MAINTAIN_PRECISION: f32 = 0.3;
 pub const DEFAULT_MAX_V_USED_RATIO: f32 = 0.8;
 pub const DEFAULT_FLY_TO_TARGET_TIMESCALE: Duration = Duration::from_millis(1000);
 
@@ -91,7 +91,9 @@ impl TaskDivider {
     pub fn divide_task(&mut self, children_info: &Vec<ChildInfo>, comm_range: f32) {
         let (pos_own, line_groups) = self.divide_pos_own_and_line_groups(&children_info);
         if let Some(comm_pos) = &self.task.comm_point {
-            assert!(distance(&pos_own, comm_pos) < comm_range);  // top node should not lose contact with its parent
+            // top node should not lose contact with its parent.
+            // TODO: fail task rather than panic.
+            assert!(distance(&pos_own, comm_pos) < comm_range);
         }
         self.own_subtask = Some(TaskExecutor::new(&pos_own, self.task.duration));
         for (cinfo, line_grp) in children_info.iter().zip(line_groups.into_iter()) {
