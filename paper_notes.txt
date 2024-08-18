@@ -1,0 +1,6 @@
+\textcite{Dimakos2024}:
+Built up a UAV swarm system from existing methods/hardware/software/algorithms.
+Presented test-bed for evaluation of swarms, especially for parts delivery.
+
+\textcite{Chen2023}:
+Robot swarm simulation platforms.
