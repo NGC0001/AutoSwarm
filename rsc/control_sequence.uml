@@ -1,0 +1,9 @@
+@startuml
+
+Control -> Contacts : update the list of neighbour UAVs \nwhich are within communication range \naccording to received messages
+Control -> NodeManagement : (sequence of Node Management module)\nupdate node according to \ncurrent position, current velocity, \nreceived messages and neighbour UAVs
+return coordinated velocity and generated messages
+Control -> Control : generate broadcasting messages
+Control -> CollisionAvoidance : calculate safe velocity
+
+@enduml

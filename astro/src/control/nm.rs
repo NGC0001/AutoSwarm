@@ -344,7 +344,7 @@ impl NodeManager {
                             self.switch_state_to_in_task(tid, TaskState::Success);
                         }
                     },
-                    None => (),  // execution in progress
+                    None => (),  // execution in progress, if already success, may need to switch node state back
                 }
             },
         };

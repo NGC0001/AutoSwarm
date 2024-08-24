@@ -1,0 +1,15 @@
+@startuml
+
+loop
+  LoopBody -> FlightKinetics : read current velocity
+  LoopBody -> GPS : read current position
+  LoopBody -> Communication : get received messages
+
+  LoopBody -> Control : (sequence of Control module)\nupdate UAV according to \ncurrent position, current velocity and received messages
+  return new velocity and generated messages
+
+  LoopBody -> FlightKinetics : set new velocity
+  LoopBody -> Communication : send generated messages
+end
+
+@enduml

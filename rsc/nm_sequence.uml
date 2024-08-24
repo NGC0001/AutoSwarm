@@ -1,0 +1,18 @@
+@startuml
+
+NodeManagement -> NodeManagement : remove connections with nodes that go out of communication range
+NodeManagement -> NodeManagement : process each received message; \nmodify connections and node states accordingly; \ngenerate necessary response messages
+NodeManagement -> NodeManagement : remove connections with silent nodes \nfrom which this UAV has \nnot received messages for too long
+alt InTask
+  alt a task has been received and task division is done
+    NodeManagement -> TaskManagement : execute sub-task
+    NodeManagement -> TaskManagement : calculate task velocity
+  end
+  NodeManagement -> NodeManagement : handle node state transitions, task division, task allocation \naccording to the swarm algorithm
+else Free
+  NodeManagement -> NodeManagement : switch swarm if there's bigger swarm nearby
+end
+NodeManagement -> NodeManagement : generate connection messages for parent and children
+NodeManagement -> NodeManagement : calculate connection velocity and coordinated velocity
+
+@enduml

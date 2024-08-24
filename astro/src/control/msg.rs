@@ -51,7 +51,7 @@ pub struct NodeDesc {
     pub p: PosVec,
     pub v: Velocity,
     pub swm: u32,  // the size of the swarm, down-flowing data
-    pub tsk: Option<u32>,  // what task the node has, down-flowing data
+    pub tsk: Option<u32>,  // current task id of the node, down-flowing data
 }
 
 impl NodeDesc {

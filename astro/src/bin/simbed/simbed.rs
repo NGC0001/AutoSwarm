@@ -21,7 +21,7 @@ use super::uavsim::{UavSim, MsgPack};
 pub const SIM_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
 pub const SIM_LOOP_INTERVAL: Duration = Duration::from_millis(50);
 pub const UAV_INIT_POS_INTERVAL: f32 = 5.0;  // m
-pub const DEFAULT_OUTPUT_DIRECTOR: &str = "output";
+pub const DEFAULT_DATA_DIRECTOR: &str = "data";
 pub const DEFAULT_OUTPUT_DURATION: Duration = Duration::from_secs(2);
 
 // used to record swarm status in a file
@@ -51,8 +51,8 @@ impl SimBed {
             let conf = UavConf::new(id, init_p_vec[id as usize]);
             uavs.push(Uav::new(conf, astro_bin));
         }
-        create_dir_all(DEFAULT_OUTPUT_DIRECTOR).expect("unable to create output directory");
-        let fname = String::from(DEFAULT_OUTPUT_DIRECTOR)
+        create_dir_all(DEFAULT_DATA_DIRECTOR).expect("unable to create data directory");
+        let fname = String::from(DEFAULT_DATA_DIRECTOR)
             + "/out-" + Local::now().format("%Y%m%d-%H%M%S").to_string().borrow();
         let f = File::create(fname).expect("unable to create output file");
         let writer = BufWriter::new(f);
