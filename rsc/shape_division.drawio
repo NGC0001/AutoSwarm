@@ -1,0 +1,64 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.5 Chrome/126.0.6478.183 Electron/31.3.0 Safari/537.36" version="24.7.5">
+  <diagram name="Page-1" id="zsxgeEqoeVZsStRxAjWg">
+    <mxGraphModel dx="1026" dy="659" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="udo9EEsFbF198kWBdlQ3-1" value="5" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="400" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-2" value="4" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="460" y="230" width="320" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-3" value="6" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="130" y="300" width="480" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-4" value="2" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="300" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-5" value="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-6" value="A line wich needs 5 UAVs.&lt;div&gt;Split into two lines by ratio 1:4.&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="92.5" y="160" width="295" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;" edge="1" parent="1" source="udo9EEsFbF198kWBdlQ3-7" target="udo9EEsFbF198kWBdlQ3-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-7" value="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-8" value="4" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="120" y="250" width="320" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-9" value="2" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="460" y="250" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;fillColor=#e1d5e7;strokeColor=#9673a6;" edge="1" parent="1" source="udo9EEsFbF198kWBdlQ3-10" target="udo9EEsFbF198kWBdlQ3-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-10" value="2" style="rounded=0;whiteSpace=wrap;html=1;fontSize=20;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="620" y="250" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-12" value="A line wich needs 4 UAVs.&lt;div&gt;Split into two lines by ratio 2:2.&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="472.5" y="160" width="295" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-13" value="A child sub-swarm with 6 UAVs." style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="281.25" y="330" width="177.5" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-14" value="A child sub-swarm with 2 UAVs." style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="615" y="330" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-15" value="The top node itself." style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="25" y="330" width="110" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.313;entryY=-0.033;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;fillColor=#f8cecc;strokeColor=#b85450;" edge="1" parent="1" source="udo9EEsFbF198kWBdlQ3-8" target="udo9EEsFbF198kWBdlQ3-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="udo9EEsFbF198kWBdlQ3-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.856;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeWidth=2;fillColor=#f8cecc;strokeColor=#b85450;" edge="1" parent="1" source="udo9EEsFbF198kWBdlQ3-9" target="udo9EEsFbF198kWBdlQ3-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
