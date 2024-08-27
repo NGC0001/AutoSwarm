@@ -22,6 +22,7 @@ pub const SIM_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
 pub const SIM_LOOP_INTERVAL: Duration = Duration::from_millis(50);
 pub const UAV_INIT_POS_INTERVAL: f32 = 2.0;  // m
 pub const DEFAULT_DATA_DIRECTOR: &str = "output";
+pub const DEFAULT_OUTPUT_DURATION_INIT: Duration = SIM_LOOP_INTERVAL_MIN;
 pub const DEFAULT_OUTPUT_DURATION: Duration = Duration::from_secs(2);
 
 // used to record swarm status in a file
@@ -40,6 +41,7 @@ pub struct SimBed {
     uavs: Vec<Uav>,  // UAV with `id` should be placed at index `id - 1`
     gcs: Gcs,  // ground control station
     writer: BufWriter<File>,
+    output_duration: Duration,
     last_output_t: Instant,
 }
 
@@ -57,12 +59,14 @@ impl SimBed {
         let f = File::create(fname).expect("unable to create output file");
         let writer = BufWriter::new(f);
         let now = Instant::now();
+        let output_duration = DEFAULT_OUTPUT_DURATION_INIT;
         SimBed {
             sim_start_t: now,
             uavs,
             gcs: Gcs::new(task_book),
             writer,
-            last_output_t: now - DEFAULT_OUTPUT_DURATION,
+            output_duration,
+            last_output_t: now - output_duration,
         }
     }
 
@@ -112,9 +116,13 @@ impl SimBed {
         Self::dispose_message_packs(&uav_sims, &msg_packs);
         Self::dispose_gcs_messages(&uav_sims, &self.gcs.generate_gcs_msgs(running_duration));
 
-        if now - self.last_output_t > DEFAULT_OUTPUT_DURATION {
+        if now - self.last_output_t > self.output_duration {
             Self::output_swarm_info(&uav_sims, &mut self.writer, running_duration);
             self.last_output_t = now;
+            self.output_duration *= 2;
+            if self.output_duration > DEFAULT_OUTPUT_DURATION {
+                self.output_duration = DEFAULT_OUTPUT_DURATION;
+            }
         }
 
         let collision_ids = Self::check_collisions_by_msg_packs(&uav_sims, &msg_packs);
