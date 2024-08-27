@@ -51,7 +51,8 @@ impl ColliVoid {
             evasion_v_sum += evasion_v * weight;
             weight_sum += weight;
         }
-        self.evade(evasion_v_sum / weight_sum, p_self, dangers[0])
+        let evasion_v = evasion_v_sum / weight_sum;  // soft evasion
+        self.evade(evasion_v, p_self, dangers[0])  // strict evasion if too close
     }
 
     // TODO: maybe considering the velocity of `danger`, and detour `danger`
