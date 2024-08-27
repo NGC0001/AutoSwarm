@@ -68,8 +68,8 @@ class SimRes():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        sim = SimRes(sys.argv[1])
-        sim.draw_snapshot(12)
-    else:
-        raise RuntimeError("need exact one argument as data file")
+    if len(sys.argv) < 2:
+        raise RuntimeError("need data file as argument")
+    sim = SimRes(sys.argv[1])
+    ishot = 0 if len(sys.argv) < 3 else int(sys.argv[2])
+    sim.draw_snapshot(ishot)

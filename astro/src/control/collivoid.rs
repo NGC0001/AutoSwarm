@@ -9,9 +9,10 @@ use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
 use super::msg::NodeDesc;
 
-pub const DEFAULT_TIME_SCALE: Duration = Duration::from_millis(1000);
-pub const DEFAULT_MINIMAL_ALERT_DISTANCE_RATIO: f32 = 5.0;
+pub const DEFAULT_TIME_SCALE: Duration = Duration::from_millis(2000);
+pub const DEFAULT_MINIMAL_ALERT_DISTANCE_RATIO: f32 = 10.0;
 pub const DEFAULT_MODEST_NUM_DANGERS: usize = 2;
+pub const DEFAULT_EVASION_TIME_SCALE: Duration = Duration::from_millis(2000);
 pub const DEFAULT_EVASION_DIST_RATIO: f32 = 3.0;
 
 pub struct ColliVoid {
@@ -33,26 +34,36 @@ impl ColliVoid {
 
     pub fn get_safe_v(&self, v_aim: &Velocity, p_self: &PosVec, neighbours: &Vec<&NodeDesc>) -> Velocity {
         let dangers = self.pick_dangers(v_aim, p_self, neighbours);
-        let capped_v = self.get_capped_v(v_aim, p_self, neighbours);
         if dangers.is_empty() {
-            return capped_v;
+            return *v_aim;
         }
-        let nearest: &NodeDesc = &dangers[0];
-        if distance(&nearest.p, p_self) > self.evasion_dist {
-            return capped_v;
+        let capped_v = self.get_capped_v(v_aim, p_self, neighbours);
+        let mut evasion_v_sum = capped_v;
+        let mut weight_sum: f32 = 1.0;
+        for (idx, d) in dangers.iter().take(self.modest_num_dangers).enumerate() {
+            let direct = &d.p - p_self;
+            if capped_v.paral_component_to(&direct) <= 0.0 {
+                continue;
+            }
+            let evasion_v= capped_v.perp_to(&direct)
+                + capped_v.paral_to(&direct).get_norm_limited((direct / DEFAULT_EVASION_TIME_SCALE).norm());
+            let weight = 0.3_f32.powi(idx as i32);
+            evasion_v_sum += evasion_v * weight;
+            weight_sum += weight;
         }
-        // TODO: just evading the nearest target is not enough,
-        // use artificial potential field method to avoid hitting nearby targets
-        self.evade(&capped_v, p_self, &nearest)
+        self.evade(evasion_v_sum / weight_sum, p_self, dangers[0])
     }
 
-    // TODO: maybe considering the velocity of `target`, and detour rather than just stop
-    fn evade(&self, v: &Velocity, p_self: &PosVec, target: &NodeDesc) -> Velocity {
-        let direct = &target.p - p_self;
-        if v.paral_component_to(&direct)<= 0.0 {
-            return *v;
+    // TODO: maybe considering the velocity of `danger`, and detour `danger`
+    fn evade(&self, v: Velocity, p_self: &PosVec, danger: &NodeDesc) -> Velocity {
+        if distance(&danger.p, p_self) > self.evasion_dist {
+            return v;
         }
-        v.perp_to(&direct)  // strip off the velocity component flying towards the target
+        let direct = &danger.p - p_self;
+        if v.paral_component_to(&direct) <= 0.0 {
+            return v;
+        }
+        v.perp_to(&direct)  // strip off the velocity component flying towards the danger
     }
 
     fn get_capped_v(&self, v_aim: &Velocity, p_self: &PosVec, dangers: &Vec<&NodeDesc>) -> Velocity {

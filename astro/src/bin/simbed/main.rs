@@ -11,7 +11,7 @@ use simbed::SimBed;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(long, default_value_t = String::from("target/debug/astro"))]
+    #[arg(long, default_value_t = String::from("target/release/astro"))]
     astro_bin: String,
     #[arg(long, default_value_t = 4)]
     num_uav: u32,

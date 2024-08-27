@@ -58,7 +58,6 @@ impl Uav {
         self.process.kill().unwrap();
         self.sim = Option::None;
         self.status = UavStatus::Shutdown;
-        println!("uav {} shutdown", self.conf.id);
     }
 
     pub fn is_shutdown(&self) -> bool {

@@ -20,8 +20,8 @@ use super::uavsim::{UavSim, MsgPack};
 
 pub const SIM_LOOP_INTERVAL_MIN: Duration = Duration::from_millis(30);
 pub const SIM_LOOP_INTERVAL: Duration = Duration::from_millis(50);
-pub const UAV_INIT_POS_INTERVAL: f32 = 5.0;  // m
-pub const DEFAULT_DATA_DIRECTOR: &str = "data";
+pub const UAV_INIT_POS_INTERVAL: f32 = 2.0;  // m
+pub const DEFAULT_DATA_DIRECTOR: &str = "output";
 pub const DEFAULT_OUTPUT_DURATION: Duration = Duration::from_secs(2);
 
 // used to record swarm status in a file
@@ -171,8 +171,9 @@ impl SimBed {
                     continue;
                 }
                 if sim.overlap_with_uav_at(pack.get_source_p()) {
-                    collision_ids.push(pack.get_source_id());
+                    // collision_ids.push(pack.get_source_id());
                     collision_ids.push(sim.get_id());
+                    println!("collision of uav {} and uav {}", sim.get_id(), pack.get_source_id());
                 }
             }
         }
@@ -181,7 +182,7 @@ impl SimBed {
 
     fn shutdown_uavs(&mut self, ids: Vec<u32>) {
         for id in ids {
-            self.uavs[(id - 1) as usize].shutdown();
+            self.uavs[id as usize].shutdown();
         }
     }
 }
