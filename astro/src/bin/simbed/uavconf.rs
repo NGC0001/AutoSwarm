@@ -4,7 +4,7 @@ use astro::kinetics::PosVec;
 
 pub const DEFAULT_POSITION_SEND_INTERVAL: Duration = Duration::from_millis(100);
 pub const DEFAULT_MSG_OUT_DISTANCE: f32 = 30.0;  // m
-pub const DEFAULT_UAV_RADIUS: f32 = 0.05;  // m
+pub const DEFAULT_UAV_RADIUS: f32 = 0.1;  // m
 pub const DEFAULT_MAX_VELOCITY: f32 = 4.0;  // m/s
 
 pub struct UavConf {

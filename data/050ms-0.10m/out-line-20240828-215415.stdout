@@ -1,0 +1,11 @@
+new connection: [0] <- 1
+new connection: [0] <- 6
+new connection: [0, 1] <- 5
+new connection: [0, 6] <- 7
+new connection: [0, 6, 7] <- 9
+new connection: [0] <- 2
+new connection: [0, 2] <- 3
+new connection: [0] <- 4
+new connection: [0, 4] <- 8
+task 0 received by 0
+task 0 succeeded

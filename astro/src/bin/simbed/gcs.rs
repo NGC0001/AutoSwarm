@@ -91,7 +91,7 @@ impl TaskInfo {
 
     fn create_ellipse(cy: f32, cz: f32, ry: f32, rz: f32, n: u32) -> Vec<PosVec> {
         let mut points: Vec<PosVec> = vec![];
-        for i in 0..n {
+        for i in 0..(n + 1) {
             let theta = (i as f32) * 2.0 * std::f32::consts::PI / (n as f32);
             let sin = theta.sin();
             let cos = theta.cos();

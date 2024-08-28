@@ -1,0 +1,281 @@
+new connection: [0] <- 4
+new connection: [0, 49] <- 1
+new connection: [0, 2] <- 49
+new connection: [0, 4] <- 12
+new connection: [0, 14, 8] <- 45
+new connection: [0, 16, 10] <- 37
+new connection: [0, 4, 13] <- 11
+new connection: [0, 21, 15] <- 48
+new connection: [0, 10, 16] <- 5
+new connection: [17] <- 42
+new connection: [0, 19] <- 39
+new connection: [0, 20] <- 6
+new connection: [0, 21] <- 15
+new connection: [0, 24] <- 34
+new connection: [0, 25] <- 36
+new connection: [0, 26] <- 43
+new connection: [0, 28] <- 7
+new connection: [0, 32] <- 9
+new connection: [0, 33] <- 40
+new connection: [0, 2, 49, 1] <- 17
+new connection: [0, 4, 13, 11] <- 29
+new connection: [14] <- 30
+new connection: [18] <- 24
+new connection: [23] <- 31
+new connection: [0] <- 3
+delete connection: [0, 2, 49, 1] <-x 17
+delete connection: [2] <-x 49
+delete connection: [0, 4] <-x 12
+delete connection: [0, 8] <-x 45
+delete connection: [0, 10] <-x 37
+delete connection: [2, 11] <-x 29
+delete connection: [0, 13] <-x 11
+delete connection: [0, 14] <-x 30
+delete connection: [0, 16] <-x 5
+delete connection: [2, 15] <-x 48
+delete connection: [2, 17] <-x 42
+delete connection: [0, 18] <-x 24
+delete connection: [0, 19] <-x 39
+delete connection: [0, 20] <-x 6
+delete connection: [2, 21] <-x 15
+delete connection: [0, 23] <-x 31
+delete connection: [2, 24] <-x 34
+delete connection: [0, 25] <-x 36
+delete connection: [2, 26] <-x 43
+delete connection: [0, 32] <-x 9
+new connection: [49] <- 2
+delete connection: [0, 28] <-x 7
+delete connection: [0, 33] <-x 40
+new connection: [0, 49, 2] <- 19
+new connection: [0, 4] <- 12
+new connection: [0, 45, 8] <- 14
+new connection: [0, 9] <- 5
+new connection: [0, 40, 10] <- 16
+new connection: [0, 13, 11] <- 29
+new connection: [0, 27, 13] <- 11
+new connection: [0, 8, 14] <- 30
+new connection: [0, 21, 18] <- 6
+new connection: [0, 23, 20] <- 17
+new connection: [0, 28, 21] <- 18
+new connection: [0, 31, 23] <- 20
+new connection: [0, 34] <- 22
+new connection: [0, 35] <- 26
+new connection: [0, 38] <- 7
+new connection: [0, 40] <- 10
+new connection: [0, 45] <- 8
+new connection: [0, 47] <- 25
+new connection: [0, 48] <- 15
+new connection: [0, 23, 20, 17] <- 1
+new connection: [0, 49, 2, 19] <- 39
+new connection: [0, 47, 25] <- 41
+new connection: [32] <- 2
+new connection: [0, 46, 36] <- 47
+new connection: [0, 47, 25, 41] <- 34
+new connection: [0, 35, 44] <- 43
+new connection: [0, 44, 46] <- 36
+new connection: [49] <- 42
+delete connection: [49] <-x 1
+delete connection: [49] <-x 2
+new connection: [49] <- 3
+delete connection: [0] <-x 3
+new connection: [0, 23, 20, 17, 1] <- 49
+new connection: [49, 3] <- 12
+delete connection: [0, 4] <-x 12
+new connection: [0, 18, 6] <- 15
+new connection: [49, 3, 12] <- 7
+new connection: [0, 46, 37, 10, 16] <- 33
+new connection: [0, 27, 13, 35, 26] <- 24
+new connection: [0, 46, 37] <- 10
+delete connection: [38] <-x 7
+delete connection: [40] <-x 10
+delete connection: [48] <-x 15
+delete connection: [49, 3, 0] <-x 4
+new connection: [0, 20, 17, 1, 49, 3, 12, 7] <- 28
+new connection: [0, 18, 6, 15] <- 31
+delete connection: [21] <-x 18
+new connection: [0, 35, 26, 24] <- 18
+new connection: [13, 11, 29] <- 27
+new connection: [0, 49, 2, 19, 39, 32] <- 9
+new connection: [0, 46, 37, 10, 16, 33] <- 40
+new connection: [35] <- 44
+new connection: [0, 46, 36, 47] <- 37
+delete connection: [0, 10, 16, 33, 45, 8] <-x 14
+delete connection: [0, 49, 2, 19, 39, 32, 14] <-x 30
+delete connection: [23, 20, 17] <-x 1
+new connection: [0, 20, 17, 1, 49, 3, 12, 7, 28] <- 21
+new connection: [0, 18, 6, 15, 31] <- 23
+delete connection: [35] <-x 26
+new connection: [0, 9, 32, 2, 19, 39] <- 30
+new connection: [0, 27, 13, 35, 44, 43] <- 26
+delete connection: [32, 1, 49] <-x 3
+new connection: [32, 0] <- 5
+new connection: [32, 0] <- 10
+new connection: [32, 1] <- 6
+new connection: [32, 3] <- 4
+delete connection: [32, 1, 6] <-x 15
+delete connection: [32, 1, 7] <-x 28
+delete connection: [32, 9] <-x 5
+delete connection: [32, 0, 10] <-x 16
+delete connection: [32, 3, 11] <-x 29
+delete connection: [32, 3, 12] <-x 7
+delete connection: [32, 3, 13] <-x 11
+delete connection: [32, 0, 16] <-x 33
+delete connection: [32, 1, 15] <-x 31
+delete connection: [32, 1, 18] <-x 6
+delete connection: [32, 1, 20] <-x 17
+delete connection: [32, 2, 19] <-x 39
+delete connection: [32, 1, 23] <-x 20
+delete connection: [32, 3, 24] <-x 18
+delete connection: [32, 0, 25] <-x 41
+delete connection: [32, 3, 26] <-x 24
+delete connection: [32, 1, 28] <-x 21
+delete connection: [32, 3, 29] <-x 27
+delete connection: [32, 1, 31] <-x 23
+delete connection: [32, 0, 33] <-x 40
+delete connection: [32, 3, 34] <-x 22
+delete connection: [32, 3, 35] <-x 44
+delete connection: [32, 3, 36] <-x 47
+delete connection: [32, 0, 37] <-x 10
+delete connection: [32, 39] <-x 30
+delete connection: [32, 3, 41] <-x 34
+delete connection: [32, 3, 43] <-x 26
+delete connection: [32, 3, 44] <-x 43
+delete connection: [32, 3, 46] <-x 36
+delete connection: [32, 0, 47] <-x 25
+delete connection: [32, 0, 47] <-x 37
+delete connection: [32, 1, 49] <-x 42
+delete connection: [32, 2, 0] <-x 5
+delete connection: [32, 2, 0] <-x 10
+new connection: [32, 2] <- 0
+delete connection: [32, 0, 3] <-x 4
+delete connection: [32, 2] <-x 19
+delete connection: [32, 0, 3] <-x 12
+new connection: [1, 9] <- 0
+delete connection: [1, 32] <-x 9
+delete connection: [1, 45] <-x 8
+new connection: [1, 49] <- 3
+delete connection: [1, 32, 2] <-x 0
+new connection: [1, 9, 5] <- 16
+new connection: [1, 45, 8] <- 14
+new connection: [1, 32, 9] <- 5
+delete connection: [1, 32, 9] <-x 0
+new connection: [1, 4, 12] <- 7
+new connection: [1, 8, 14] <- 30
+new connection: [1, 21, 18] <- 22
+new connection: [1, 23, 20] <- 17
+new connection: [1, 28, 21] <- 18
+new connection: [1, 31, 23] <- 20
+new connection: [1, 35, 26] <- 24
+new connection: [32] <- 9
+new connection: [1, 35] <- 26
+new connection: [1, 37] <- 10
+new connection: [1, 39] <- 19
+new connection: [1, 45] <- 8
+new connection: [1, 47] <- 25
+new connection: [1, 48] <- 15
+delete connection: [32, 1, 49] <-x 3
+new connection: [32, 0] <- 5
+new connection: [32, 0] <- 9
+new connection: [32, 1] <- 4
+new connection: [32, 3] <- 11
+new connection: [32, 3] <- 13
+new connection: [32, 2] <- 19
+delete connection: [32, 0, 5] <-x 16
+delete connection: [32, 8] <-x 14
+delete connection: [32, 0, 9] <-x 5
+delete connection: [32, 1, 12] <-x 7
+delete connection: [32, 14] <-x 30
+delete connection: [32, 1, 18] <-x 22
+delete connection: [32, 1, 20] <-x 17
+delete connection: [32, 1, 21] <-x 18
+delete connection: [32, 1, 23] <-x 20
+delete connection: [32, 3, 26] <-x 24
+new connection: [32] <- 8
+delete connection: [32] <-x 9
+new connection: [32] <- 14
+delete connection: [32, 3, 35] <-x 26
+delete connection: [32, 0, 37] <-x 10
+delete connection: [32, 39] <-x 19
+delete connection: [32, 45] <-x 8
+delete connection: [32, 0, 47] <-x 25
+delete connection: [32, 1, 48] <-x 15
+delete connection: [1] <-x 4
+delete connection: [1] <-x 6
+new connection: [1] <- 19
+delete connection: [1] <-x 49
+delete connection: [32, 2] <-x 19
+new connection: [32, 1, 12, 7] <- 38
+new connection: [32, 0, 40, 10] <- 16
+new connection: [32, 3, 11] <- 29
+new connection: [32, 1, 4, 12] <- 7
+new connection: [32, 3, 13] <- 35
+new connection: [32, 0, 10, 16] <- 33
+new connection: [32, 1, 48, 15] <- 6
+new connection: [32, 1, 20, 17] <- 42
+new connection: [32, 1, 21, 18] <- 22
+new connection: [32, 1, 23, 20] <- 17
+new connection: [32, 1, 28, 21] <- 18
+new connection: [32, 1, 31, 23] <- 20
+new connection: [32, 3, 26, 24] <- 34
+new connection: [32, 3, 35, 26] <- 24
+new connection: [32, 3, 11, 29] <- 27
+new connection: [32, 0, 16, 33] <- 40
+new connection: [32, 3, 13, 35] <- 26
+new connection: [32, 3, 43, 36] <- 41
+new connection: [32, 0, 33, 40] <- 10
+new connection: [32, 1, 17, 42] <- 49
+new connection: [32, 3, 44, 43] <- 36
+new connection: [32, 3, 35, 44] <- 43
+new connection: [32, 0, 16, 47] <- 25
+new connection: [32, 1, 48] <- 15
+delete connection: [1] <-x 19
+delete connection: [3] <-x 13
+new connection: [32, 14] <- 30
+new connection: [32, 3, 29, 27] <- 13
+new connection: [32, 14, 30] <- 39
+new connection: [32, 30, 39] <- 19
+new connection: [32, 2] <- 0
+new connection: [32, 0, 33, 40, 10] <- 37
+new connection: [32, 0, 33, 40, 10, 16] <- 47
+new connection: [32, 3, 29, 27, 13, 35] <- 44
+new connection: [32, 3, 13, 35, 44] <- 46
+new connection: [32, 1, 20, 17, 42, 49] <- 3
+new connection: [32, 3, 11, 29, 27, 12, 7] <- 28
+new connection: [32, 3, 11, 29, 27, 13] <- 4
+delete connection: [48, 15] <-x 6
+new connection: [23, 20] <- 6
+new connection: [32] <- 1
+new connection: [32, 0, 40, 10, 16, 33] <- 45
+new connection: [32, 1] <- 15
+new connection: [32, 1] <- 17
+delete connection: [32, 3, 11, 29, 27, 12, 7] <-x 38
+delete connection: [32, 14] <-x 30
+delete connection: [32, 1, 18] <-x 22
+delete connection: [32, 1, 20] <-x 17
+delete connection: [32, 1, 21] <-x 18
+delete connection: [32, 1, 23] <-x 20
+delete connection: [32, 1, 20, 17, 42, 49, 3, 11, 29] <-x 27
+delete connection: [32, 1, 48] <-x 15
+delete connection: [30] <-x 39
+new connection: [32] <- 39
+new connection: [32, 1, 15] <- 48
+new connection: [18] <- 21
+new connection: [32, 1, 18, 21] <- 38
+new connection: [32, 1, 31, 23] <- 20
+new connection: [32, 39] <- 30
+new connection: [32, 1] <- 18
+new connection: [32, 1, 18] <- 22
+new connection: [32, 1, 15] <- 23
+new connection: [32, 1, 18] <- 12
+new connection: [32, 1, 15] <- 31
+new connection: [32, 1, 18] <- 27
+delete connection: [32, 0, 33, 40, 10, 16] <-x 33
+delete connection: [32, 0, 40, 10, 16, 33] <-x 40
+delete connection: [10] <-x 16
+delete connection: [40] <-x 10
+new connection: [32, 2, 0, 5] <- 16
+new connection: [32, 1, 18, 27, 13, 35, 44, 46] <- 10
+new connection: [32] <- 33
+new connection: [32] <- 40
+task 1 received by 32
+task 1 succeeded

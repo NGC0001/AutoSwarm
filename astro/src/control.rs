@@ -16,7 +16,7 @@ use collivoid::ColliVoid;
 use contacts::Contacts;
 use nm::NodeManager;
 
-pub const DEFAULT_BROADCASTING_DURATION: Duration = Duration::from_millis(100);
+pub const DEFAULT_BROADCASTING_DURATION: Duration = Duration::from_millis(50);
 
 pub struct Control {
     conf: Rc<AstroConf>,
