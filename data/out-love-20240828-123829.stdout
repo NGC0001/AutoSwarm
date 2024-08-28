@@ -1,0 +1,187 @@
+new connection: [0] <- 8
+new connection: [10] <- 6
+new connection: [27] <- 7
+new connection: [32] <- 1
+new connection: [33] <- 5
+new connection: [0, 39] <- 2
+new connection: [0, 46] <- 3
+new connection: [0, 49] <- 4
+new connection: [0, 27, 7] <- 14
+new connection: [0, 8] <- 13
+new connection: [0, 16, 9] <- 41
+delete connection: [10] <-x 6
+new connection: [0, 31, 11] <- 45
+new connection: [0, 8, 13] <- 38
+new connection: [0, 25, 16] <- 9
+new connection: [0, 35, 18] <- 44
+new connection: [0, 21, 20] <- 17
+new connection: [0, 31, 21] <- 20
+new connection: [0, 23] <- 47
+new connection: [0, 24] <- 48
+new connection: [0, 25] <- 16
+new connection: [0, 26] <- 40
+new connection: [0, 29] <- 15
+new connection: [0, 30] <- 37
+new connection: [0, 31] <- 11
+new connection: [0, 34] <- 12
+new connection: [0, 35] <- 18
+new connection: [0, 24, 48] <- 6
+new connection: [0, 8, 49, 4] <- 30
+new connection: [0, 32, 1] <- 26
+new connection: [0, 29, 15] <- 35
+new connection: [0, 21, 20, 17] <- 33
+new connection: [19] <- 36
+new connection: [27] <- 1
+delete connection: [32] <-x 1
+delete connection: [0, 20, 17, 33] <-x 5
+delete connection: [39] <-x 2
+new connection: [0, 16, 9, 41] <- 23
+new connection: [0, 35, 18, 44] <- 34
+new connection: [0, 11, 45] <- 10
+delete connection: [46] <-x 3
+delete connection: [0, 31, 21, 24, 48] <-x 6
+delete connection: [49] <-x 4
+delete connection: [0] <-x 8
+new connection: [27, 3] <- 12
+new connection: [27, 2] <- 13
+new connection: [27, 5] <- 15
+new connection: [27, 6] <- 10
+delete connection: [27, 4, 8] <-x 13
+delete connection: [27, 1, 9] <-x 41
+delete connection: [27, 6, 11] <-x 45
+delete connection: [27, 2, 13] <-x 38
+delete connection: [27, 5, 15] <-x 35
+delete connection: [27, 1, 16] <-x 9
+delete connection: [27, 5, 17] <-x 33
+delete connection: [27, 1, 19] <-x 36
+delete connection: [27, 1, 20] <-x 17
+delete connection: [21] <-x 20
+delete connection: [27, 2, 23] <-x 47
+delete connection: [27, 6, 24] <-x 48
+delete connection: [27, 1, 25] <-x 16
+delete connection: [27, 1, 26] <-x 40
+delete connection: [27, 1, 29] <-x 15
+delete connection: [27, 4, 30] <-x 37
+delete connection: [27, 1, 31] <-x 11
+delete connection: [27, 7, 34] <-x 12
+delete connection: [27, 5, 35] <-x 18
+delete connection: [27, 2, 41] <-x 23
+delete connection: [27, 3, 18, 44] <-x 34
+delete connection: [27, 6, 45] <-x 10
+new connection: [27, 0] <- 19
+new connection: [27, 0] <- 25
+new connection: [27, 7] <- 34
+delete connection: [27, 18] <-x 44
+delete connection: [0] <-x 19
+delete connection: [0] <-x 25
+delete connection: [4] <-x 30
+delete connection: [3] <-x 12
+delete connection: [2] <-x 13
+delete connection: [5] <-x 15
+delete connection: [6] <-x 10
+new connection: [27, 0, 36, 19] <- 25
+new connection: [27, 1, 21, 24] <- 48
+new connection: [27, 3, 46, 30] <- 4
+new connection: [33] <- 17
+new connection: [27, 7, 34] <- 44
+new connection: [27, 35] <- 15
+new connection: [27, 2, 23, 41] <- 9
+new connection: [27, 43] <- 5
+new connection: [27, 6, 48, 45] <- 10
+new connection: [27, 4, 30, 46] <- 3
+new connection: [27, 2, 13, 47] <- 49
+new connection: [27, 6, 24, 48] <- 45
+new connection: [27, 2, 47, 49] <- 8
+new connection: [27] <- 18
+new connection: [27, 1] <- 32
+new connection: [27, 2, 23, 41, 9] <- 19
+new connection: [27, 6, 48, 45, 11] <- 31
+new connection: [20] <- 17
+new connection: [27, 1, 26] <- 40
+new connection: [29] <- 15
+delete connection: [30] <-x 4
+delete connection: [33] <-x 17
+delete connection: [35] <-x 15
+delete connection: [43] <-x 5
+new connection: [27, 6, 24, 48, 45] <- 11
+delete connection: [46] <-x 3
+new connection: [27, 4] <- 22
+new connection: [27, 3] <- 12
+new connection: [27, 2] <- 13
+new connection: [5] <- 33
+new connection: [27, 6] <- 24
+delete connection: [27, 6, 24] <-x 48
+delete connection: [27, 2, 41] <-x 9
+delete connection: [27, 2, 47] <-x 49
+new connection: [0] <- 36
+new connection: [27] <- 0
+new connection: [4] <- 30
+new connection: [3] <- 42
+new connection: [27, 2] <- 23
+new connection: [27, 1] <- 16
+new connection: [5] <- 43
+new connection: [6] <- 48
+new connection: [27, 0] <- 9
+delete connection: [3] <-x 12
+delete connection: [2] <-x 13
+delete connection: [3] <-x 42
+delete connection: [2] <-x 23
+new connection: [27, 1] <- 20
+delete connection: [5] <-x 33
+delete connection: [5] <-x 43
+delete connection: [6] <-x 24
+delete connection: [6] <-x 48
+new connection: [27, 0, 9] <- 41
+new connection: [27, 4, 37, 12] <- 46
+new connection: [27, 1, 16] <- 28
+new connection: [27, 4, 22] <- 38
+new connection: [27] <- 43
+new connection: [27, 3, 42, 39] <- 2
+new connection: [27, 0, 9, 41] <- 23
+new connection: [27, 1, 29, 42] <- 35
+new connection: [27, 43] <- 5
+new connection: [27, 2, 13, 47] <- 49
+new connection: [27, 5, 33, 48] <- 6
+delete connection: [4] <-x 22
+delete connection: [4] <-x 30
+new connection: [37] <- 22
+new connection: [27, 4] <- 13
+new connection: [4] <- 37
+new connection: [27, 3] <- 12
+new connection: [3] <- 42
+new connection: [27] <- 3
+new connection: [4] <- 30
+new connection: [27, 1] <- 21
+new connection: [27, 4, 13] <- 47
+new connection: [27, 1, 21] <- 24
+delete connection: [39] <-x 2
+new connection: [27, 4, 13, 47, 49] <- 2
+delete connection: [4] <-x 30
+delete connection: [4] <-x 37
+new connection: [27, 4, 47, 49, 2] <- 39
+new connection: [27, 3, 12] <- 37
+new connection: [27, 3, 12, 37] <- 30
+new connection: [27, 3, 42] <- 29
+delete connection: [4] <-x 13
+new connection: [27, 1, 33, 48, 45, 10] <- 6
+delete connection: [48] <-x 6
+new connection: [27, 43, 5] <- 33
+new connection: [27] <- 2
+delete connection: [4, 13, 47, 49] <-x 2
+new connection: [27, 0] <- 10
+new connection: [27, 4] <- 8
+new connection: [27, 2] <- 13
+new connection: [27, 1] <- 48
+delete connection: [27, 2, 13] <-x 47
+delete connection: [27, 2, 47] <-x 49
+delete connection: [27, 0, 45] <-x 10
+delete connection: [27, 0, 45] <-x 11
+delete connection: [27, 1, 48] <-x 45
+delete connection: [27, 2, 49] <-x 8
+new connection: [27, 2, 13] <- 47
+new connection: [27, 1, 21, 11] <- 45
+new connection: [27, 1, 21] <- 11
+new connection: [27] <- 4
+new connection: [27, 2] <- 49
+task 1 received by 27
+task 1 succeeded

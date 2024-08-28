@@ -11,7 +11,7 @@ mod contacts;
 mod nm;
 mod tm;
 
-use msg::{NodeDesc, Msg};
+use msg::Msg;
 use collivoid::ColliVoid;
 use contacts::Contacts;
 use nm::NodeManager;

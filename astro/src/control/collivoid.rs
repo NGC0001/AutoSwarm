@@ -13,7 +13,7 @@ pub const DEFAULT_TIME_SCALE: Duration = Duration::from_millis(2000);
 pub const DEFAULT_MINIMAL_ALERT_DISTANCE_RATIO: f32 = 10.0;
 pub const DEFAULT_MODEST_NUM_DANGERS: usize = 2;
 pub const DEFAULT_EVASION_TIME_SCALE: Duration = Duration::from_millis(2000);
-pub const DEFAULT_EVASION_DIST_RATIO: f32 = 3.0;
+pub const DEFAULT_EVASION_DIST_RATIO: f32 = 5.0;
 
 pub struct ColliVoid {
     t_scale: Duration,
