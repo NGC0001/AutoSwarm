@@ -16,7 +16,7 @@ use collivoid::ColliVoid;
 use contacts::Contacts;
 use nm::NodeManager;
 
-pub const DEFAULT_BROADCASTING_DURATION: Duration = Duration::from_millis(150);
+pub const DEFAULT_BROADCASTING_DURATION: Duration = Duration::from_millis(100);
 
 pub struct Control {
     conf: Rc<AstroConf>,
@@ -57,9 +57,8 @@ impl Control {
             self.last_broadcasting_t = now;
         }
 
-        let neighbours_desc: Vec<&NodeDesc> = neighbours.iter().map(|ct| &ct.desc).collect();
         // collision avoidance module calculating safe velocity
-        let safe_v = self.collivoid.get_safe_v(&next_v, p, &neighbours_desc);
+        let safe_v = self.collivoid.get_safe_v(&next_v, p, &neighbours, now);
 
         (safe_v, msgs_out)
     }

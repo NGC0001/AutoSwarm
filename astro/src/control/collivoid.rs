@@ -3,11 +3,11 @@
 // TODO: test this module, maybe using unit tests
 
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use super::super::astroconf::AstroConf;
 use super::super::kinetics::{distance, PosVec, Velocity};
-use super::msg::NodeDesc;
+use super::contacts::Contact;
 
 pub const DEFAULT_TIME_SCALE: Duration = Duration::from_millis(2000);
 pub const DEFAULT_MINIMAL_ALERT_DISTANCE_RATIO: f32 = 10.0;
@@ -32,16 +32,16 @@ impl ColliVoid {
         }
     }
 
-    pub fn get_safe_v(&self, v_aim: &Velocity, p_self: &PosVec, neighbours: &Vec<&NodeDesc>) -> Velocity {
-        let dangers = self.pick_dangers(v_aim, p_self, neighbours);
+    pub fn get_safe_v(&self, v_aim: &Velocity, p_self: &PosVec, neighbours: &Vec<&Contact>, now: Instant) -> Velocity {
+        let dangers = self.pick_dangers(v_aim, p_self, neighbours, now);
         if dangers.is_empty() {
             return *v_aim;
         }
-        let capped_v = self.get_capped_v(v_aim, p_self, neighbours);
+        let capped_v = self.get_capped_v(v_aim, p_self, neighbours, now);
         let mut evasion_v_sum = capped_v;
         let mut weight_sum: f32 = 1.0;
         for (idx, d) in dangers.iter().take(self.modest_num_dangers).enumerate() {
-            let direct = &d.p - p_self;
+            let direct = d.predict_p(now) - p_self;
             if capped_v.paral_component_to(&direct) <= 0.0 {
                 continue;
             }
@@ -52,44 +52,46 @@ impl ColliVoid {
             weight_sum += weight;
         }
         let evasion_v = evasion_v_sum / weight_sum;  // soft evasion
-        self.evade(evasion_v, p_self, dangers[0])  // strict evasion if too close
+        self.evade(evasion_v, p_self, dangers[0], now)  // strict evasion if too close
     }
 
     // TODO: maybe considering the velocity of `danger`, and detour `danger`
-    fn evade(&self, v: Velocity, p_self: &PosVec, danger: &NodeDesc) -> Velocity {
-        if distance(&danger.p, p_self) > self.evasion_dist {
+    fn evade(&self, v: Velocity, p_self: &PosVec, danger: &Contact, now: Instant) -> Velocity {
+        if distance(&danger.predict_p(now), p_self) > self.evasion_dist {
             return v;
         }
-        let direct = &danger.p - p_self;
+        let direct = danger.predict_p(now) - p_self;
         if v.paral_component_to(&direct) <= 0.0 {
             return v;
         }
         v.perp_to(&direct)  // strip off the velocity component flying towards the danger
     }
 
-    fn get_capped_v(&self, v_aim: &Velocity, p_self: &PosVec, dangers: &Vec<&NodeDesc>) -> Velocity {
+    fn get_capped_v(&self, v_aim: &Velocity, p_self: &PosVec, dangers: &Vec<&Contact>, now: Instant) -> Velocity {
         if dangers.len() <= self.modest_num_dangers {
             return *v_aim;
         }
         let mut v_ave: Velocity = Velocity::zero();
         for d in dangers {
-            v_ave += d.v;
+            v_ave += d.desc.v;
         }
         v_ave /= dangers.len() as f32;
-        let v_delta_cap: f32 = ((dangers[self.modest_num_dangers].p - p_self) / self.t_scale).norm();
+        let max_movement = dangers[self.modest_num_dangers].predict_p(now) - p_self;
+        let v_delta_cap: f32 = (max_movement / self.t_scale).norm();
         let mut v_delta: Velocity = v_aim - v_ave;
         v_delta.limit_norm_to(v_delta_cap);
         v_ave + v_delta
     }
 
     // result is sorted by distance
-    fn pick_dangers<'a>(&self, v_aim: &Velocity, p_self: &PosVec, neighbours: &Vec<&'a NodeDesc>)
-    -> Vec<&'a NodeDesc> {
+    fn pick_dangers<'a>(&self, v_aim: &Velocity, p_self: &PosVec, neighbours: &Vec<&'a Contact>, now: Instant)
+    -> Vec<&'a Contact> {
         let alert_d: f32 = f32::max((v_aim * self.t_scale).norm(), self.minimal_alert_dist);
-        let mut dangers: Vec<&NodeDesc> = neighbours.iter().map(|nd| *nd).filter(
-            |nd| distance(&nd.p, p_self) <= alert_d).collect();
+        let mut dangers: Vec<&Contact> = neighbours.iter().map(|nd| *nd).filter(
+            |nd| distance(&nd.predict_p(now), p_self) <= alert_d).collect();
         dangers.sort_unstable_by(|nd1, nd2| {
-            distance(&nd1.p, p_self).partial_cmp(&distance(&nd2.p, p_self)).unwrap()
+            distance(&nd1.predict_p(now), p_self).partial_cmp(
+                &distance(&nd2.predict_p(now), p_self)).unwrap()
         });
         dangers
     }

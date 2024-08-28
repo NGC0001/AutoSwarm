@@ -13,6 +13,12 @@ pub struct Contact {
 }
 
 impl Contact {
+    pub fn predict_p(&self, now: Instant) -> PosVec {
+        self.desc.p + self.desc.v * (now - self.last_heard)
+    }
+}
+
+impl Contact {
     pub fn from_msg(msg_time: Instant, msg: &Msg) -> Contact {
         Contact {
             desc: msg.sender.clone(),
