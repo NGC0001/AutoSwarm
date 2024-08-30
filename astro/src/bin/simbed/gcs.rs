@@ -34,7 +34,7 @@ impl TaskInfo {
         }
     }
 
-    pub fn demo_love() -> TaskInfo {
+    pub fn demo_lttr() -> TaskInfo {
         TaskInfo {
             task: Task {
                 id: 1,
@@ -115,8 +115,8 @@ impl Gcs {
         let mut tasks: Vec<TaskInfo> = vec![];
         if task_book.is_empty() || task_book == "demo_simple_line" {
             tasks.push(TaskInfo::demo_simple_line());
-        } else if task_book == "demo_love" {
-            tasks.push(TaskInfo::demo_love());
+        } else if task_book == "demo_lttr" {
+            tasks.push(TaskInfo::demo_lttr());
         } else {
             for line in read_to_string(task_book).unwrap().lines() {
                 let task_info: TaskInfo = serde_json::from_str(line).unwrap();

@@ -102,10 +102,10 @@ def draw_line_figures():
     return draw_sim_figures(sim, [1, 5, 6, 11, 12, 15], sav_prefix="line")
 
 
-def draw_love_figures():
-    sim = SimRes("data/050ms-0.10m/out-love-20240828-221140")
+def draw_lttr_figures():
+    sim = SimRes("data/050ms-0.10m/out-lttr-20240828-221140")
     return draw_sim_figures(sim, [1, 4, 7, 8, 12, 13, 14, 18],
-                            sav_prefix="love",
+                            sav_prefix="lttr",
                             tree_prog="twopi",  # "twopi" or "circo"
                             tree_ns=100, tree_fs=8,
                             pos_view_elev=15, pos_view_azim=5,
@@ -121,5 +121,5 @@ if __name__ == "__main__":
         sim.draw_snapshot(ishot)
     else:
         draw_line_figures()
-        draw_love_figures()
+        draw_lttr_figures()
         plt.show()
