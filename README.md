@@ -7,9 +7,22 @@ They themselves are marionettes with no idea of a pattern.
 
 However, this project creates a UAV swarm
 where UAVs make real-time decisions and arrange themselves into a designated pattern.
+This is achieved in two steps.
+1. Before any task is received,
+UAVs dynamically organsied themselves into a hierachical tree structure.
+2. After a task is received which contains a designated pattern,
+the pattern is split into smaller subpatterns layer by layer down the tree,
+and each UAV picks up a point from its received subpattern as its target position.
+
+## About the Repository
 
 This is a Rust workspace with two packages `astro` and `quantity`.
 "astro" stands for "Autonomous Swarm Tasking Routing and Organisation".
+It is the main package implementing the swarm algorithm.
+`quantity` is an auxiliary package dealing with physical vector quantities.
+
+`data` directory contains some simulation results.
+`vis.py` is a python script for data visualisation.
 
 ## Usage
 
@@ -20,9 +33,10 @@ This is a Rust workspace with two packages `astro` and `quantity`.
 5. Build simbed and run built-in demo: `cargo run --release --bin simbed -- --num-uav 10 --task-book demo_simple_line`.
 6. Press `Ctrl-C` to stop running.
 7. The output file is `output/out-YYYYMMDD-HHMMSS`, with each line a json object.
+Here the `YYYYMMDD` is the date and `HHMMSS` is the time.
 8. Visualise the `(idx+1)`-th json object: `python3 ./vis.py output/out-YYYYMMDD-HHMMSS idx`.
 The visualisation needs python package `matplotlib` and `networkx`.
 
 Note, if the number of UAVs specified by the `--num-uav` argument is too large,
 the program may crash.
-An empirical rule is less than two time the number of the cpu cores.
+An empirical rule is less than two times the number of the cpu cores.
