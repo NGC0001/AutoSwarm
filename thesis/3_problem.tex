@@ -1,0 +1,103 @@
+To develop and demonstrate a swarm algorithm,
+an application scenario is needed.
+Inspired by drone shows, where drones form various interesting shapes,
+in this thesis, the task for a swarm is to form a designated geometric shape.
+Since the purpose is focused on swarm control and coordination, many other aspects,
+such as aerodynamics, obstacle avoidance, and power or fuel management,
+are ignored or simplified.
+The problem is formulated below.
+
+\section{UAV Properties}
+
+At time point $t = 0$, a set of homogeneous UAVs
+$W = \{U_i | i = 0, 1, \ldots, N_u-1; N_u > 0\}$
+are located at initial positions $\bm{P}_i(t=0) = (x_{i0}, y_{i0}, z_{i0})$.
+They are already airborne. The taking-off process is not considered.
+
+Each UAV $U_i$ has a unique ID $id_i$.
+The ID set has total order, which means IDs are comparable.
+
+GPS receivers are installed, so UAVs can read
+their positions $\bm{P}_i(t) = (x_i, y_i, z_i)$.
+The distance between two UAVs $U_i$ and $U_j$ is
+\begin{equation}
+d_{ij}(t) = d_{ji}(t) = ||\bm{P}_i(t) - \bm{P}_j(t)||.
+\end{equation}
+They will clash if $d_{ij} \leqslant 2 r_{rad}$,
+where $r_{rad}$ is the radius of a UAV.
+
+UAVs are able to move at arbitrary velocity $\bm{V}_i(t) = (vx_i, vy_i, vz_i)$,
+as long as
+\begin{equation}
+v_i(t) = ||\bm{V}_i(t)|| \leqslant v_{max},
+\end{equation}
+where $v_{max}$ is the given maximum speed of the UAVs.
+Hovering, i.e., $\bm{V} = \bm{0}$, is allowed.
+In real cases, a UAV can only control its engines or rotors.
+The actual acceleration and velocity are determined by engine power and aerodynamics.
+In this thesis, the flight control is greatly simplified,
+and the UAVs are assumed to be able to change their velocity directly.
+Besides, it's assumed that the UAVs fly in the same manner in all directions,
+without the need to care about attitude,
+which is of course not true for any real UAVs.
+
+UAVs do not known the existence of each other at $t = 0$.
+UAV $U_i$ can receive all the data sent by UAV $U_j$
+if the distance between them is within the given communication range $r_{comm}$,
+i.e., $d_{ij} \leqslant r_{comm}$.
+Latency and bandwidth problems are not considered.
+At $t = 0$, the initial positions of the UAVs ensure that,
+any two UAVs are within communication range.
+
+\section{Representation of Geometric Shapes}
+
+A ``shape" here is made up of one or multiple lines.
+While a ``line" here is made up of one or multiple connected line segments.
+A line segment is defined by two points,
+so a line can be defined by a sequence of points.
+
+Let $L$ represent a sequence of $N_p$ different points
+$\bm{P}_0, \bm{P}_1, \ldots, \bm{P}_{N_p-1}$,
+where $\bm{P}_k = (x_k, y_k, z_k), 0 \leqslant k \leqslant N_p-1$,
+and $N_p \geqslant 2$.
+$L$ defines $N_p - 1$ connected line segments, which form a ``line".
+A point $\bm{P} = (x, y, z)$ is said to be on line $L$
+if it falls onto any of the line segments,
+that is, there exist an integer $i, 0 \leqslant i < N_p-1$,
+and a real number $c, 0 \leqslant c \leqslant 1$, such that
+\begin{eqnarray}
+    (x - x_i) &=& c(x_{i+1} - x_i), \\
+    (y - y_i) &=& c(y_{i+1} - y_i), \\
+    (z - z_i) &=& c(z_{i+1} - z_i).
+\end{eqnarray}
+A shape $S$ is a set of $N_l$ lines $\{L_m | m = 0, 1, \ldots, N_l-1; N_l > 0\}$.
+$\bm{P}$ is said to be on $S$ if it is on any of the lines.
+
+Lines defined above can not represent curves.
+However, a curve can be approximated by a large amount of short line segments,
+in the commonly used way how a circle is approximated by a polygon.
+
+\section{Swarm Tasks}
+\label{sec:swm_tsk}
+
+A task $TSK$ contains a unique task ID $tid$, a shape $S$ and a time period $\Delta t$.
+
+Let $W$ be a set of UAVs.
+At some time point $t'$,
+task $TSK$ is sent by GCS to an arbitrary member of $W$.
+The mission for $W$ is,
+all the UAVs move onto the shape and stay for $\Delta t$.
+That is, the task is said to be successfully executed
+if there exists a time point $T, t' \leqslant T < +\infty$,
+such that for any time point $t \in [T, T+\Delta t]$ and for any UAV $U \in W$,
+$U$ is on $S$.
+
+Collisions shall be avoided.
+That is, at any time point $t$, for any two UAVs $U_i$ and $U_j$,
+the distance between them shall satisfy $d_{ij} > 2 r_{rad}$.
+
+Additionally, UAVs should be distributed as evenly as possible along the lines.
+This means to minimise the mean square root of UAV intervals along the lines.
+This is not the primary goal of the task, so it is not formally stated here.
+But later in section \ref{sec:tsk_div},
+an algorithm will be implemented to address this goal.

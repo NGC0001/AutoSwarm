@@ -1,0 +1,70 @@
+The code is organised into two Rust packages, $astro$ and $quantity$.
+
+\section{Package \texorpdfstring{$astro$}{astro}}
+
+$astro$ stands for ``Autonomous Swarm Tasking, Routing, and Organisation".
+It is the main package. The Rust modules contained in this package are listed below.
+\begin{itemize}
+  \item $astro$. Defines struct $Astro$,
+        which has member fields of type $Comm$, $Control$, $Gps$, and $Kinetics$.
+        The software main loop mentioned in section \ref{sec:sft_arch} is implemented
+        in this Rust module.
+  \item $astroconf$. Contains configurations such as the radius of a UAV.
+  \item $comm$. Defines struct $Comm$.
+        This Rust module implements
+        the functional module ``Communication" in section \ref{sec:sft_arch}.
+  \item $control$. Defines struct $Control$,
+        which has member fields of type $Contacts$, $NodeManager$, and $ColliVoid$.
+        Implements the functional module ``Control" in section \ref{sec:sft_arch}.
+        It has the following submodules.
+    \begin{itemize}
+      \item $collivoid$. Defines struct $ColliVoid$.
+            Implements the functional module ``Collision Avoidance"
+            in section \ref{sec:sft_arch}.
+      \item $contacts$. Defines struct $Contacts$.
+            Implements the functional module ``Contacts" in section \ref{sec:sft_arch}.
+      \item $msg$. Defines struct $Msg$ and some other related types.
+            Objects of $Msg$ type need to be transferred among UAVs as messages.
+      \item $nm$. Defines struct $NodeManager$.
+            Implements the functional module ``Node Management" in section \ref{sec:sft_arch}.
+            Rust enum $NodeState$ is defined to represent the node states.
+      \item $tm$. Defines struct $TaskManager$.
+            Implements the functional module ``Task Management" in section \ref{sec:sft_arch}.
+            It also defines structs $TaskDivider$ and $TaskExecutor$
+            which are used to divide and execute a task.
+    \end{itemize}
+  \item $gps$. Defines struct $Gps$.
+        Implements the functional module ``GPS" in section \ref{sec:sft_arch}.
+  \item $kinetics$. Defines struct $Kinetics$.
+        Implements the functional module ``Flight Kinetics" in section \ref{sec:sft_arch}.
+        Some kinetic physical quantities are also defined here,
+        e.g., $PosVec$ for position vector.
+  \item $transceiver$. As there is no real hardware,
+        $comm$, $gps$, and $kinetics$ actually interact with simulation infrastructure.
+        The $transceiver$ module is an adapter
+        between the three modules and the simulation infrastructure.
+        It uses socket with non-blocking API as an inter-process communication method.
+\end{itemize}
+
+Serialisation and deserialisation are necessary for any software that
+transfers internal data through network.
+In package $astro$, Rust crate $serde$ is employed for this purpose.
+$serde$ provides macro $Serialize$ and macro $Deserialize$,
+which enable a type to serialise into and deserialise from a byte sequence.
+All the structs defined in module $msg$ derive $Serialize$ and $Deserialize$,
+since they need to be transferred as byte sequence through network.
+
+The 32-bit unsigned integer type $u32$ is chosen as the type of UAV ID.
+$Vec$<$u32$> is chosen as the type of NID.
+Task ID is also of type $u32$.
+
+\section{Package \texorpdfstring{$quantity$}{quantity}}
+
+$quantity$ is an auxiliary package.
+It defines $VectorF32$, which is a Rust macro.
+After deriving $VectorF32$,
+structs which are composed of $f32$ fields
+can participate in some linear algebraic manipulations.
+The struct $PosVec$ for position vector, and the struct $Velocity$ for velocity vector,
+which are both 3D kinematic quantities defined in $kinetics$ module,
+derive this macro.

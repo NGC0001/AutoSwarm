@@ -1,0 +1,48 @@
+Unmanned aerial vehicles (UAVs) have seen more and more application in personal life,
+commercial business, industries, and military affairs.
+Recently with the advance of technology, scenarios emerge where a group of UAVs
+carry out an assigned task in a coordinated way \parencite{Dimakos2024, Javed2024, Ouyang2023}.
+Such UAV groups are called UAV swarms.
+Swarms are much more complex than individual UAVs,
+and application of swarms is still in its infancy.
+
+To fully explore and utilise UAV swarms, a lot of researchers have investigated algorithms
+related to the communication, control, and task management of swarms
+\parencite{Javaid2023, Zhou2020}.
+Such algorithms can be roughly divided into two categories,
+\textit{centralised algorithms} where a leader UAV is in charge of all the other UAVs,
+and \textit{decentralised algorithms} where all UAVs are treated equally.
+Decentralised algorithms can further be divided into two types,
+\textit{negotiation-based algorithms} where each UAV negotiates with other UAVs to make decisions,
+and \textit{reaction-based algorithms} where UAVs achieve collective behaviour through
+observing other UAVs and reacting according to preset rules.
+
+Centralised algorithms are simple,
+but are prone to single points of failure induced by the leader.
+Reaction-based algorithms are robust,
+but are not suitable for complex tasks where elaborate coordination among UAVs is necessary.
+Negotiation-based algorithms are powerful,
+but entails a large amount of computation and all-to-all communication during negotiation,
+effectively limiting the size of the swarm.
+
+The \textbf{aim} of this thesis is
+to \textit{find a robust algorithm suitable for large swarms and complex tasks}.
+The proposed \textbf{solution} is
+a \textit{hierarchical swarm} where UAVs dynamically organise themselves into a tree structure.
+Instead of all-to-all communication, messages are mainly sent between UAVs
+whose corresponding tree nodes are directly connected.
+Tasks are managed in a divide-and-conquer way layer by layer down the tree.
+
+To achieve this aim, the thesis below presents the following contributions:
+\begin{enumerate}
+    \item Firstly a \textit{swarm application scenario} is conceived (see chapter \ref{chap_problem}).
+    \item Then based on the scenario,
+          the \textit{algorithm is proposed} (see section \ref{sec:alg_design}),
+          and the \textit{software architecture} that embodies this algorithm is \textit{designed}
+           (see section \ref{sec:sft_arch}).
+    \item Thirdly, a detailed \textit{implementation is built}
+          to demonstrate the viability of the proposed solution (see chapter \ref{chap_impl}).
+    \item Lastly,
+          \textit{simulation is carried out to evaluate the algorithm} (see chapter \ref{chap_sim}).
+          The results verified that the algorithm is suitable for large swarms and complex tasks. 
+\end{enumerate}

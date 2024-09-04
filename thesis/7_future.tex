@@ -1,0 +1,71 @@
+\section{Conclusion}
+
+In this thesis, a hierarchical UAV swarm algorithm is proposed and demonstrated.
+The algorithm enables large autonomous swarms
+to carry out complex tasks effectively and robustly.
+The key idea of the algorithm is to dynamically organise a group of UAVs into a tree structure.
+Tasks are divided and executed layer by layer down the tree.
+Since messages are mainly sent between each child-parent node pair,
+there is no need for many-to-many communication,
+improving the flexibility of the swarm and reducing the communication overhead.
+Tasks are handled in a divide-and-conquer way,
+so the computational overhead is reduced compared to fully distributed algorithms.
+When the depth of the tree grows, the number of nodes grows exponentially,
+thus large swarm sizes are supported.
+The tree structure of the swarm is dynamically organised,
+which means the structure can be repaired if any UAV fails,
+therefore the structure is robust.
+
+To design and implement the algorithm in detail,
+an application scenario is conceived in chapter \ref{chap_problem},
+where the task for a swarm is to form designated shapes.
+Based on the scenario, the swarm algorithm is developed step by step in chapter \ref{chap_design}.
+Then the algorithm is implemented in Rust in chapter \ref{chap_impl}.
+A simulation bed is built to carry out simulations in chapter \ref{chap_sim}.
+
+Two simulation cases are run, the simple line task and the letter task.
+The results show that the algorithm performs as expected.
+In both cases, the tree structure is organised and the designated shapes are formed.
+Therefore, the feasibility of the algorithm is verified.
+In the letter task, the swarm comprises of 50 UAVs,
+showing that the algorithm is suitable for large swarm sizes.
+
+\section{Future Work}
+
+Although the main goal of this thesis is accomplished,
+there is still a significant need for further improvement.
+\begin{itemize}
+    \item Solve the problems listed in section \ref{sec:eval},
+          so as to make the algorithm more applicable to real drone shows.
+    \item Carry out simulations to
+          compare the developed algorithm with other types of swarm algorithms,
+          and verify the advantages and disadvantages of the developed algorithm.
+    \item Adapt the software, deploy it to real drones, and perform real experiments.
+\end{itemize}
+
+Besides, based on the results of this thesis,
+there are some interesting directions for future research.
+\begin{itemize}
+    \item Complex hierarchical swarm structure.
+          A hierarchical swarm structure does not have to be a simple tree.
+          For example, UAVs can be divided into small groups,
+          and these groups are organised into a tree.
+          Inside each group, UAVs are equal and fully distributed algorithms are run.
+          While between the groups, hierarchical algorithms are run.
+          This tree-of-group structure may be more robust than a simple tree.
+    \item Tree adaption according to task requirements.
+          A swarm will be more powerful
+          if it is able to adjust its tree structure for each specific task.
+          For example, if a node with 10 descendant nodes has two sub-tasks,
+          which require 4 UAVs and 6 UAVs respectively,
+          then the node can arrange its descendant nodes into two sub-swarms of size 4 and size 6.
+    \item Node management with machine learning methods.
+          In this thesis, a state machine is used to manage node status and task status.
+          However, for more complex tasks and more complex swarm structures,
+          the number of states grows quickly and becomes unmanageable.
+          Machine learning methods may help in these situations.
+    \item Heterogeneous hierarchical swarm.
+          UAVs may be heterogeneous.
+          For instance, they may have different communication ranges.
+          Organisation and coordination of such swarms are much more complicated.
+\end{itemize}

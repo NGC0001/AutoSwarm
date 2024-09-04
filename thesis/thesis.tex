@@ -1,0 +1,200 @@
+\documentclass[ieee]{uob-thesis}
+
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{eqnarray}
+\usepackage{hyperref}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+
+\usepackage{algorithm}
+\counterwithin{algorithm}{chapter}
+\usepackage{algpseudocode}
+
+\usepackage{chngcntr}
+\newtheorem{remark}{Remark}
+\counterwithin{remark}{chapter}
+
+\usepackage{blindtext}
+\newcommand\blfootnote[1]{%
+\begingroup
+\renewcommand\thefootnote{}\footnote{#1}%
+\addtocounter{footnote}{-1}%
+\endgroup
+}
+
+\DeclareMathOperator*{\argmax}{argmax}
+
+\addbibresource{refs.bib}
+
+%%%%%%%%%%%%%%%%%%%
+%% AUTHOR DETAILS %
+%%%%%%%%%%%%%%%%%%%
+
+
+\title{Autonomous Hierarchical Control and Coordination of Unmanned Aerial Vehicle Swarms}
+% \subtitle{with applications to life}
+\author{Yunpeng Yang}
+
+\DTMsavedate{thesisdate}{2024-08-31}        % do not change name, will be re-used
+\date{\printdatewithoutmonth{thesisdate}}
+
+% change as appropriate, e.g.
+%   Master of Science by advanced study in Computer Science (Conversion)
+%   Bachelor of Science in Computer Science
+%   Master of Engineering in Computer Science
+\degree{Master~of~Science~in~Computer~Science~(Conversion)}
+
+\school{School~of~Computer~Science}
+\faculty{Faculty~of~Engineering}
+
+\wordcount{$\sim$15000}
+
+\begin{document}
+
+%%% -------------------------------------------------------------
+%%% THESE TITLE PAGES ARE SPECIFIED BY THE REGULATIONS
+%%% DO NOT CHANGE ORDER 
+%%%
+%%% comment out to remove any section
+
+\maketitle
+\cleardoubleoddemptypage
+
+\begin{abstract}
+In recent years, the application of unmanned aerial vehicle swarms
+in civilian and military scenarios has become increasingly promising.
+There has been a surge of research interest in swarm algorithms.
+This thesis proposes a hierarchical swarm algorithm,
+where the unmanned aerial vehicles dynamically organise themselves into a tree structure,
+and coordinate with each other to carry out assigned tasks.
+The algorithm enables large swarms to deal with complex tasks robustly.
+The main contributions of this thesis are as follows.
+\begin{itemize}
+\item An application scenario of autonomous swarms is conceived (see chapter \ref{chap_problem}).
+      The scenario is inspired by drone shows. The task of a swarm is to form designated shapes.
+\item Based on the scenario,
+      a new algorithm is designed for the hierarchical control and coordination of swarms
+      (see chapter \ref{chap_design}).
+\item The algorithm is implemented in the Rust programming language
+      with more than 2000 lines of source code (see chapter \ref{chap_impl}).
+\item Simulations are carried out
+      to demonstrate the design and implementation of the algorithm (see chapter \ref{chap_sim}).
+      The results show that
+      the algorithm is suitable for large swarm size and complex task coordination.
+\end{itemize}
+
+Keywords: UAV swarm, hierarchical swarm, swarm control, swarm coordination.
+
+\blfootnote{GitHub repository: \url{https://github.com/NGC0001/AutoSwarm}}
+\end{abstract}
+
+% \begin{dedication}
+%   To my darling mama,\\
+%   sine-qua-non.
+% \end{dedication}
+
+\begin{acknowledgements}
+This thesis is accomplished under the guidance of my supervisor, Professor Ruzanna Chitchyan.
+She was also one of the lecturers of the course Software Engineering.
+I would like to thank her for her support and advice.
+I would also like to thank all the people
+who have helped me through out the year of study in the University of Bristol.
+\end{acknowledgements}
+
+\begin{declaration}
+I declare that the work in this dissertation was carried out in accordance
+with the requirements of the University's Regulations and Code of Practice for
+Taught Programmes and that it has not been submitted for any other academic award.
+Except where indicated by specific reference in the text, the work is the
+candidate's own work. Work done in collaboration with, or with the assistance
+of, others, is indicated as such. Any views expressed in the
+dissertation are those of the author.
+  
+\vspace{2cm}
+
+\includegraphics[width=4cm]{sig}
+\end{declaration}
+
+%%%
+%%% TITLE PAGES END HERE
+%%% -----------------------------------------------------
+
+
+%%%
+%% FRONT MATTER
+%%%
+
+\frontmatter
+
+%% THESE MUST BE IN THIS ORDER ACCORDING TO REGULATIONS
+\tableofcontents
+\listoftables
+\listoffigures
+
+
+%%%%%%%%%%%%%%%%
+%% MAIN MATTER %
+%%%%%%%%%%%%%%%%
+
+\mainmatter
+
+\chapter{Aims and Objectives}
+\label{chap_aim}
+
+  \input{1_aims}
+
+\chapter{Background and Context}
+\label{chap_bg}
+
+  \input{2_background}
+
+\chapter{Problem Formulation}
+\label{chap_problem}
+
+  \input{3_problem}
+
+\chapter{Algorithm and Software Design}
+\label{chap_design}
+
+  \input{4_design}
+
+\chapter{Implementation Details}
+\label{chap_impl}
+
+  \input{5_impl}
+
+\chapter{Simulation and Evaluation}
+\label{chap_sim}
+
+  \input{6_simulation}
+
+\chapter{Conclusion and Future Work}
+\label{chap_fw}
+
+  \input{7_future}
+
+%%%%%%%%%%%%%%%%
+
+\appendix
+
+\chapter{Code Overview}
+\label{app_code}
+
+  \input{a_1_code}
+
+%%%%%%%%%%%%%%%%
+%% BACK MATTER %
+%%%%%%%%%%%%%%%%
+
+\clearpage
+
+\backmatter
+
+\chapter*{Bibliography}
+
+\markboth{BIBLIOGRAPHY}{BIBLIOGRAPHY}
+\printbibliography[heading=none]
+
+\end{document}
