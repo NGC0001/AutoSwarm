@@ -14,7 +14,7 @@ UAVs dynamically organsied themselves into a hierachical tree structure.
 the pattern is split into smaller subpatterns layer by layer down the tree,
 and each UAV picks up a point from its received subpattern as its target position.
 
-Refer to the ![thesis](thesis/thesis.pdf) for more details.
+Refer to the [thesis](thesis/thesis.pdf) for more details.
 
 ## About the Repository
 
@@ -44,5 +44,7 @@ the program may crash.
 An empirical rule is less than two times the number of the cpu cores.
 
 ## Simulation Case
+
+<img src="thesis/rsc/lttr.01.png" alt="simulation case" width="70%">
 
 <img src="thesis/rsc/lttr.18.png" alt="simulation case" width="70%">
