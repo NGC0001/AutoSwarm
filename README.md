@@ -14,6 +14,8 @@ UAVs dynamically organsied themselves into a hierachical tree structure.
 the pattern is split into smaller subpatterns layer by layer down the tree,
 and each UAV picks up a point from its received subpattern as its target position.
 
+Refer to the ![thesis](thesis/thesis.pdf) for more details.
+
 ## About the Repository
 
 This is a Rust workspace with two packages `astro` and `quantity`.
@@ -40,3 +42,7 @@ The visualisation needs python package `matplotlib` and `networkx`.
 Note, if the number of UAVs specified by the `--num-uav` argument is too large,
 the program may crash.
 An empirical rule is less than two times the number of the cpu cores.
+
+## Simulation Case
+
+<img src="thesis/rsc/lttr.18.png" alt="simulation case" width="70%">
